@@ -47,11 +47,11 @@ Using probability flow ordinary differential equation formulated in diffusion mo
 
 * Interpolation between two functional conformations reveals intermediate states in protein dynamics. Conjugately, Interpolation between two remote structural homologs (re)discovers evolutionary and novel proteins.
 
-<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/interpolation.jpg" width="100%"></p>
+<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/interpolation.png" width="100%"></p>
 
 * Few-shot activate learning of activity profile improves the efficiency of directed evolution. 
 
-<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/evo.jpg" width="75%"></p>
+<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/evo.png" width="75%"></p>
 
 [``example_scripts/latent_space.ipynb``](example_scripts/latent_space.ipynb) illustrates how proteins can be interpolated and evolved in the latent space of **PT-DiT**.
 
