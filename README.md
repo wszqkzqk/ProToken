@@ -33,9 +33,13 @@ Before running scripts, download pre-trained checkpoints of **ProToken** encoder
 ### Diffusion Transformer over Unified Sequence and Structure Representations is a Versatile Tool for Protein Engineering
 **ProTokens** provide a unified perspective on protein sequences and structures. **PT-DiT**, a [diffusion transformer](https://www.wpeebles.com/DiT.html) that models the joint probability of protein sequences and structures, can co-generate diverse proteins in the form of compatible sequence/structure pairs. 
 
-Furthermore, through [RePaint](https://github.com/andreas128/RePaint) algorithm, **PT-DiT** 
+<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/co_generation.jpg" width="75%"></p>
 
-[``example_scripts/de_novo_design.ipynb''](example_scripts/de_novo_design.ipynb) and [``example_scripts/repaint.ipynb''] illustrate how to generate and edit proteins with **PT-DiT**. 
+Furthermore, through [RePaint](https://github.com/andreas128/RePaint) algorithm, **PT-DiT** can "infill" sequences/structures with given context. Therefore, pre-trained **PT-DiT** becomes a zero-shot toolkit for various tasks in protein engineering, such as (contextual) inverse folding, functional site scaffolding, etc.
+
+<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/inpaint.jpg" width="100%"></p>
+
+[``example_scripts/de_novo_design.ipynb''](example_scripts/de_novo_design.ipynb) and [``example_scripts/repaint.ipynb''](example_scripts/repaint.ipynb) illustrate how to generate and edit proteins with **PT-DiT**. 
 
 ### Manipulating Proteins in the Latent Space of PT-DiT
 
