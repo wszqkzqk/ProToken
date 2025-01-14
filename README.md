@@ -55,6 +55,8 @@ Using probability flow ordinary differential equation formulated in diffusion mo
 
 [``example_scripts/latent_space.ipynb``](example_scripts/latent_space.ipynb) illustrates how proteins can be interpolated and evolved in the latent space of **PT-DiT**.
 
+...
+
 ## Citation
 ```python
 @article{lin2023tokenizing,
