@@ -1,7 +1,8 @@
 # ProToken: Differentiable Protein Engineering through using Diffusion Transformer over Neural Amino Acids
 This is the github repo for the paper *Differentiable Protein Engineering through using Diffusion Transformer over ProTokens*. An early version is preprinted at [biorxiv](https://doi.org/10.1101/2023.11.27.568722).
 
-ProTokens, developed by the Gao Group at Peking University, 
+<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/model_arch.jpg" width="100%"></p>
+**ProTokens**, developed by the Gao Group at Peking University, machine-learned "amino acids" derived from protein structure databases via self-supervised learning, providing a compact yet informative representation that bridges "1D" (sequence) and "3D" (structure) modalities of proteins. Building on **ProTokens**, we develop **PT-DiT**, a diffusion transformer that jointly models protein sequences and structures through a generative objective. **ProTokens** and **PT-DiT** enable efficient encoding of 3D folds, contextual protein design, sampling of metastable states, and directed evolution for diverse objectives.
 
 ## Installation 
 Running example scripts in [example_scripts](./example_scripts) requires:
