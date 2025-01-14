@@ -39,9 +39,13 @@ Furthermore, through [RePaint](https://github.com/andreas128/RePaint) algorithm,
 
 <p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/inpaint.jpg" width="100%"></p>
 
-[``example_scripts/de_novo_design.ipynb''](example_scripts/de_novo_design.ipynb) and [``example_scripts/repaint.ipynb''](example_scripts/repaint.ipynb) illustrate how to generate and edit proteins with **PT-DiT**. 
+[``example_scripts/de_novo_design.ipynb``](example_scripts/de_novo_design.ipynb) and [``example_scripts/repaint.ipynb``](example_scripts/repaint.ipynb) illustrate how to generate and edit proteins with **PT-DiT**. 
 
 ### Manipulating Proteins in the Latent Space of PT-DiT
+
+Using probability flow ordinary differential equation formulated in diffusion models. Pre-training of **PT-DiT** yields a compact and organized (both *sequence-aware* and *structure-aware*) latent Gaussian space of proteins. 
+
+[``example_scripts/latent_space.ipynb``](example_scripts/latent_space.ipynb) illustrates how proteins can be interpolated and evolved in the latent space of **PT-DiT**.
 
 ## Citation
 ```python
