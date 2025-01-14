@@ -43,7 +43,15 @@ Furthermore, through [RePaint](https://github.com/andreas128/RePaint) algorithm,
 
 ### Manipulating Proteins in the Latent Space of PT-DiT
 
-Using probability flow ordinary differential equation formulated in diffusion models. Pre-training of **PT-DiT** yields a compact and organized (both *sequence-aware* and *structure-aware*) latent Gaussian space of proteins. 
+Using probability flow ordinary differential equation formulated in diffusion models. Pre-training of **PT-DiT** yields a compact and organized latent Gaussian space (which is *sequence-aware* and *structure-aware*) of proteins. By virtue of its compactness and informativeness, this latent space is suitable for manipulating and evolving proteins: 
+
+* Interpolation between two functional conformations reveals intermediate states in protein dynamics. Conjugately, Interpolation between two remote structural homologs (re)discovers evolutionary and novel proteins.
+
+<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/interpolation.jpg" width="100%"></p>
+
+* Few-shot activate learning of activity profile improves the efficiency of directed evolution. 
+
+<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/evo.jpg" width="75%"></p>
 
 [``example_scripts/latent_space.ipynb``](example_scripts/latent_space.ipynb) illustrates how proteins can be interpolated and evolved in the latent space of **PT-DiT**.
 
@@ -60,4 +68,4 @@ Using probability flow ordinary differential equation formulated in diffusion mo
 ```
 
 ## Contact
-For questions or further information, please contact [jzhang@cpl.ac.cn](jzhang@cpl.ac.cn).
+For questions or further information, please contact [fengsh@cpl.ac.cn](fengsh@cpl.ac.cn) or [jzhang@cpl.ac.cn](jzhang@cpl.ac.cn).
