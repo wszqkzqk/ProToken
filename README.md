@@ -30,7 +30,7 @@ Before running scripts, download pre-trained checkpoints of **ProToken** encoder
 
 [``example_scripts/encode_decode_structure.sh``](example_scripts/encode_decode_structure.sh) and [``example_scripts/encode_decode_structure_batch.sh``](example_scripts/encode_decode_structure_batch.sh) illustrate how to encode structure (in .pdb format) or structures (a directory of pdb files) into **ProTokens**, and decode them back into reconstructed structure(s). 
 
-### Diffusion Transformer over Unified Sequence and Structure Representations is a Versatile Tool for Protein Engineering
+### Protein Engineering via Diffusion Transformer over Unified Sequence and Structure Representations
 **ProTokens** provide a unified perspective on protein sequences and structures. **PT-DiT**, a [diffusion transformer](https://www.wpeebles.com/DiT.html) that models the joint probability of protein sequences and structures, can co-generate diverse proteins in the form of compatible sequence/structure pairs. 
 
 <p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/co_generation.jpg" width="75%"></p>
