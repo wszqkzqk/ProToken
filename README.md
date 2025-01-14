@@ -20,7 +20,7 @@ Running example scripts in [example_scripts](./example_scripts) requires:
 In theory, any environment compatible with the packages mentioned above should run successfully. We also provide [environment.yml](environment.yml) which can directly create a compatible conda environment via `conda env create -f environment.yml` (with possible redundant dependencies). Our configuration includes Ubuntu 22.04 (GNU/Linux x86_64), NVIDIA A100-SXM4-80GB, CUDA 12.2 and Anaconda 23.7.2. The complete notebook execution takes approximately 0.5 hours.
 
 ## Exploring ProTokens's capabilities!
-Before running scripts, download pre-trained checkpoints of **ProToken** encoder/decoder and **PT-DiT** in [here](), and move them into [ckpts](ckpts).
+Before running scripts, download pre-trained checkpoints of **ProToken** encoder/decoder and **PT-DiT** in [here](https://drive.google.com/drive/folders/1sO_FQh1AF4iEQnV2W4_Px29QVA0WN7QM), and move them into [ckpts](ckpts).
 
 ### Highly Compact and Informative Structure Representation with ProTokens
 * Compactness: **ProTokens** represent protein structures as machine-learned "amino acids", a structure-aware "amino acid" (``vocabulary size=512``) is assigned to each residue of proteins with ProToken encoder. 
@@ -28,7 +28,16 @@ Before running scripts, download pre-trained checkpoints of **ProToken** encoder
 
 <p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/recon.png" width="100%"></p>
 
-### Diffusion Transformer over Unified Sequence and Structure Representations
+[``example_scripts/encode_decode_structure.sh``](example_scripts/encode_decode_structure.sh) and [``example_scripts/encode_decode_structure_batch.sh``](example_scripts/encode_decode_structure_batch.sh) illustrate how to encode structure (in .pdb format) or structures (a directory of pdb files) into **ProTokens**, and decode them back into reconstructed structure(s). 
+
+### Diffusion Transformer over Unified Sequence and Structure Representations is a Versatile Tool for Protein Engineering
+**ProTokens** provide a unified perspective on protein sequences and structures. **PT-DiT**, a [diffusion transformer](https://www.wpeebles.com/DiT.html) that models the joint probability of protein sequences and structures, can co-generate diverse proteins in the form of compatible sequence/structure pairs. 
+
+Furthermore, through [RePaint](https://github.com/andreas128/RePaint) algorithm, **PT-DiT** 
+
+[``example_scripts/de_novo_design.ipynb''](example_scripts/de_novo_design.ipynb) and [``example_scripts/repaint.ipynb''] illustrate how to generate and edit proteins with **PT-DiT**. 
+
+### Manipulating Proteins in the Latent Space of PT-DiT
 
 ## Citation
 ```python
