@@ -1,11 +1,11 @@
-# ProToken: Differentiable Protein Engineering through using Diffusion Transformer over Neural Amino Acids
+# ProToken: Differentiable Protein Engineering through Diffusion Transformer over Neural Amino Acids
 This is the github repo for the paper *Differentiable Protein Engineering through using Diffusion Transformer over ProTokens*. An early version is preprinted at [biorxiv](https://doi.org/10.1101/2023.11.27.568722).
 
 <p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/model_arch.jpg" width="100%"></p>
 
 **ProTokens**, developed by the Gao Group at Peking University, are machine-learned "amino acids" derived from protein structure databases via self-supervised learning, providing a compact yet informative representation that bridges "1D" (sequence) and "3D" (structure) modalities of proteins. Building on **ProTokens**, we develop **PT-DiT**, a [diffusion transformer](https://www.wpeebles.com/DiT.html) that jointly models protein sequences and structures through a generative objective. **ProTokens** and **PT-DiT** enable efficient encoding of 3D folds, contextual protein design, sampling of metastable states, and directed evolution for diverse objectives. 
 
-<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/app.jpg" width="100%"></p>
+<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/app.jpeg" width="100%"></p>
 
 ## Installation 
 Running example scripts in [example_scripts](./example_scripts) requires:
@@ -21,6 +21,14 @@ In theory, any environment compatible with the packages mentioned above should r
 
 ## Exploring ProTokens's capabilities!
 Before running scripts, download pre-trained checkpoints of **ProToken** encoder/decoder and **PT-DiT** in [here](), and move them into [ckpts](ckpts).
+
+### Highly Compact and Informative Structure Representation with ProTokens
+* Compactness: **ProTokens** represent protein structures as machine-learned "amino acids", a structure-aware "amino acid" (``vocabulary size=512``) is assigned to each residue of proteins with ProToken encoder. 
+* Informativeness:  Compared with natural amino acid (``vocabulary size=20``), **ProTokens** can be faithfully "(re)fold" into corresponding structures. Furthermore, **ProTokens** can distinguish between different conformations, which are considered as degenerate in sequence-based representations.
+
+<p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/recon.png" width="100%"></p>
+
+### Diffusion Transformer over Unified Sequence and Structure Representations
 
 ## Citation
 ```python
