@@ -15,7 +15,10 @@ Running example scripts in [example_scripts](./example_scripts) requires:
 * flax==0.8.3
 * ml-collections==0.1.1
 ### Other dependencies
-* numpy, scipy, scikit-learn, biopandas, biopython 
+* diffrax==0.6.0
+* scikit-learn==1.5.1
+* biopandas==0.5.1
+* biopython==1.84
 
 In theory, any environment compatible with the packages mentioned above should run successfully. We also provide [environment.yml](environment.yml) which can directly create a compatible conda environment via `conda env create -f environment.yml` (with possible redundant dependencies). Our configuration includes Ubuntu 22.04 (GNU/Linux x86_64), NVIDIA A100-SXM4-80GB, CUDA 12.2 and Anaconda 23.7.2. The complete notebook execution takes approximately 0.5 hours.
 
