@@ -60,7 +60,7 @@ def inference(pdb_dir_path, save_dir_path, load_ckpt_path,
     NRES = args.padding_len # 1200 # 256
     BATCHSIZE = 2 # 2 under 1300 resiudes
     EXCLUDE_NEIGHBOR = 3 
-    NDEVICES = 8
+    NDEVICES = len(jax.devices())
     BATCHSIZE = BATCHSIZE * NDEVICES # 48 (6 for each device and 8 devices in total)
     
     protoken_feature_preprocess = ["seq_mask", "aatype", "fake_aatype", "residue_index",
