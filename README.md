@@ -14,6 +14,8 @@ Running example scripts in [example_scripts](./example_scripts) requires:
 * jax==0.4.28, jaxlib==0.4.28
 * flax==0.8.3
 * ml-collections==0.1.1
+* dm-tree==0.1.8
+* dm-haiku==0.0.12
 ### Other dependencies
 * diffrax==0.6.0
 * scikit-learn==1.5.1
