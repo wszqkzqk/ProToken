@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "False"
+import sys
+sys.path.append('..')
+
+import jax
+import jax.numpy as jnp
+import pickle as pkl
+import numpy as np
+from tqdm import tqdm
+import argparse
+
+from functools import partial
+from src.model.diffusion_transformer import DiffusionTransformer
+from train.schedulers import GaussianDiffusion
+import datetime
+from flax.jax_utils import replicate
+from functools import reduce
+
+from configs.global_config import global_config
+from configs.dit_config import dit_config
+global_config.dropout_flag = False 
+
+### Load embedding 
+with open('../embeddings/protoken_emb.pkl', 'rb') as f:
+    protoken_emb = jnp.array(pkl.load(f), dtype=jnp.float32)
+with open('../embeddings/aatype_emb.pkl', 'rb') as f:
+    aatype_emb = jnp.array(pkl.load(f), dtype=jnp.float32)
+
+#### constants
+NRES = 512 ### test in ProToken paper (2024.07) Nres = 256
+NSAMPLE_PER_DEVICE = 100
+DIM_EMB = protoken_emb.shape[-1] + aatype_emb.shape[-1] # 40 # 32 + 8
+NDEVICES = len(jax.devices())
+
+BATCH_SIZE = NSAMPLE_PER_DEVICE * NDEVICES
+
+#### function utils 
+
+def split_multiple_rng_keys(rng_key, num_keys):
+    rng_keys = jax.random.split(rng_key, num_keys + 1)
+    return rng_keys[:-1], rng_keys[-1]
+
+def flatten_list_of_dicts(list_of_dicts):
+    ### [{a: [1,2,3,4]}] -> [{a:1}, {a:2}, {a:3}, {a:4}]
+    flattened_lists = [[{k: v[i] for k, v in d.items()} 
+                        for i in range(len(next(iter(d.values()))))] for d in list_of_dicts]
+    return reduce(lambda x, y: x+y, flattened_lists, [])
+
+def protoken_emb_distance_fn(x, y):
+    x_ = x / (jnp.linalg.norm(x, axis=-1, keepdims=True) + 1e-6)
+    y_ = y / (jnp.linalg.norm(y, axis=-1, keepdims=True) + 1e-6)
+    
+    return -jnp.sum(x_ * y_, axis=-1)
+
+def aatype_emb_distance_fn(x, y):
+    return jnp.sum((x - y) ** 2, axis=-1)
+
+def aatype_index_to_resname(aatype_index):
+    restypes = [
+        'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P',
+        'S', 'T', 'W', 'Y', 'V'
+    ]
+    
+    return "".join([restypes[int(i)] for i in aatype_index])
+
+def resname_to_aatype_index(resnames):
+    restypes = [
+        'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P',
+        'S', 'T', 'W', 'Y', 'V'
+    ]
+    return np.array([restypes.index(a) for a in resnames], dtype=np.int32)
+
+#### load model & params 
+dit_model = DiffusionTransformer(
+    config=dit_config, global_config=global_config
+)
+num_diffusion_timesteps = 500
+scheduler = GaussianDiffusion(num_diffusion_timesteps=num_diffusion_timesteps)
+
+#### rng keys
+rng_key = jax.random.PRNGKey(8888)
+np.random.seed(7777)
+
+##### load params
+ckpt_path = '../ckpts/PT_DiT_params_1000000.pkl'
+with open(ckpt_path, "rb") as f:
+    params = pkl.load(f)
+    params = jax.tree_util.tree_map(lambda x: jnp.array(x), params)
+
+##### main inference functions
+jit_apply_fn = jax.jit(dit_model.apply)
+infer_protuple = True
+
+def index_from_embedding(x):
+    # x: (B, Nres, Nemb)
+    protoken_indexes = \
+        jnp.argmin(protoken_emb_distance_fn(x[..., None, :protoken_emb.shape[-1]], 
+                                            protoken_emb[None, None, ...]), axis=-1)
+    ret = {'protoken_indexes': protoken_indexes}
+    if bool(infer_protuple):
+        aatype_indexes = \
+            jnp.argmin(aatype_emb_distance_fn(x[..., None, protoken_emb.shape[-1]:], 
+                                                aatype_emb[None, None, ...]), axis=-1)
+        ret.update({'aatype_indexes': aatype_indexes})
+        
+    return ret            
+    
+pjit_index_from_embedding = jax.pmap(jax.jit(index_from_embedding), axis_name="i")
+
+from diffrax import diffeqsolve, Dopri5, ODETerm, SaveAt, PIDController
+
+def ode_drift(x, t, seq_mask, residue_index):
+    t_arr = jnp.full((x.shape[0],), t)
+    indicator = params['params']['protoken_indicator']
+    if bool(infer_protuple):
+        indicator = jnp.concatenate([indicator, params['params']['aatype_indicator']], 
+                                    axis=-1)
+    eps_prime = jit_apply_fn({'params': params['params']['model']}, x + indicator[None, ...], 
+                            seq_mask, t_arr, tokens_rope_index=residue_index)
+
+    beta_t = scheduler.betas[jnp.int32(t)]
+    sqrt_one_minus_alphas_cumprod_t = scheduler.sqrt_one_minus_alphas_cumprod[jnp.int32(t)]
+    
+    return 0.5 * beta_t * (-x + 1.0 / sqrt_one_minus_alphas_cumprod_t * eps_prime)
+
+rtol, atol, method = 1e-5, 1e-5, "RK45"
+
+def solve_ode(t_0, t_1, dt0, x_0, seq_mask, residue_index):
+    term = ODETerm(lambda t, y, args: jax.jit(ode_drift)(y, t, seq_mask, residue_index))
+    solver = Dopri5()
+    stepsize_controller = PIDController(rtol=rtol, atol=atol)
+
+    sol = diffeqsolve(term, solver, t0=t_0, t1=t_1, y0=x_0, dt0=dt0,
+                        stepsize_controller=stepsize_controller, max_steps=65536)
+    
+    return sol.ys[-1]
+
+pjit_solve_ode = jax.pmap(jax.jit(solve_ode), axis_name='i', in_axes=(None, None, None, 0, 0, 0))
+
+# Latent Interpolation
+if __name__ == "__main__":
+    import argparse  # ensure argparse is imported if not already
+    parser = argparse.ArgumentParser(description="Script to generate meta stable structure")
+    parser.add_argument("--pkl1", type=str,
+                        help="Full path for the first pkl file")
+    parser.add_argument("--pkl2", type=str,
+                        help="Full path for the second pkl file")
+    parser.add_argument("--output", type=str, required=True,
+                        help="Directory to save the results")
+    args = parser.parse_args()
+
+    pkl_list = [args.pkl1] * (BATCH_SIZE // 2) + [args.pkl2] * (BATCH_SIZE // 2)
+    data_dicts = []
+    for protoken_file in pkl_list:
+        with open(protoken_file, 'rb') as f:
+            data = pkl.load(f)
+        seq_len = data['seq_len']
+        embedding = np.concatenate(
+            [protoken_emb[data['protokens'].astype(np.int32)],
+             aatype_emb[data['aatype'].astype(np.int32)]], axis=-1)
+        embedding = np.pad(embedding, ((0, NRES - seq_len), (0, 0)))
+        data_dicts.append({
+            'embedding': embedding,
+            'seq_mask': np.pad(data['seq_mask'], (0, NRES - seq_len)).astype(np.bool_),
+            'residue_index': np.pad(data['residue_index'], (0, NRES - seq_len)).astype(np.int32),
+        })
+    data_dict = {k: np.stack([d[k] for d in data_dicts], axis=0) for k in data_dicts[0].keys()}
+
+    # For pmap: reshape inputs
+    reshape_func = lambda x: x.reshape(NDEVICES, x.shape[0] // NDEVICES, *x.shape[1:])
+    data_dict = jax.tree_util.tree_map(reshape_func, data_dict)
+
+    # Forward PF-ODE: data -> latent
+    x0 = data_dict['embedding']
+    xT = pjit_solve_ode(0, scheduler.num_timesteps, 1.0, x0, data_dict['seq_mask'], data_dict['residue_index'])
+    xT_np = np.array(xT)
+
+    lambda_arr = np.linspace(0, 1, BATCH_SIZE) # May try other interpolation schemes
+
+    xT = xT.reshape(BATCH_SIZE, NRES, DIM_EMB)
+    xT_A, xT_B = xT[0], xT[-1] ## end-point
+    xT_interpolation = []
+
+    for i in range(BATCH_SIZE):
+        xT_interpolation.append(
+            ((1.0 - lambda_arr[i]) * xT_A + lambda_arr[i] * xT_B)
+        )
+    xT_interpolation = jnp.array(xT_interpolation).reshape(NDEVICES, NSAMPLE_PER_DEVICE, NRES, DIM_EMB)
+
+    # Backward PF-ODE: latent -> data
+    x0_interpolation = pjit_solve_ode(scheduler.num_timesteps, 0, -1.0, 
+                                  xT_interpolation, data_dict['seq_mask'], data_dict['residue_index'])
+
+    ret = {'embedding': x0_interpolation, 'seq_mask': data_dict['seq_mask'], 'residue_index': data_dict['residue_index']}
+    ret.update(pjit_index_from_embedding(ret['embedding']))
+
+    ret = jax.tree_util.tree_map(lambda x: np.array(x.reshape(BATCH_SIZE, *x.shape[2:])).tolist(), ret)
+    
+    os.makedirs(args.output, exist_ok=True)
+    result_pkl = os.path.join(args.output, "result.pkl")
+    result_flatten_pkl = os.path.join(args.output, "result_flatten.pkl")
+    
+    with open(result_pkl, 'wb') as f:
+        pkl.dump(ret, f)
+        
+    ret_ = flatten_list_of_dicts([ret])
+    with open(result_flatten_pkl, 'wb') as f:
+        pkl.dump(ret_, f)
+
