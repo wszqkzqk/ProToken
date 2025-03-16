@@ -11,6 +11,7 @@
 
 ### add PROTOKEN modules into python path
 export PYTHONPATH=./PROTOKEN
+mkdir -p ./pdbs/result/decode_pdb
 python ./PROTOKEN/scripts/decode_structure.py \
     --decoder_config ./PROTOKEN/config/decoder.yaml \
     --vq_config ./PROTOKEN/config/vq.yaml \
