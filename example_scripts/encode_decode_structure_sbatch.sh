@@ -11,6 +11,7 @@
 
 ### add PROTOKEN modules into python path
 export PYTHONPATH=./PROTOKEN
+mkdir -p ./pdbs/result
 python ./PROTOKEN/scripts/infer_batch.py \
     --encoder_config ./PROTOKEN/config/encoder.yaml \
     --decoder_config ./PROTOKEN/config/decoder.yaml \
