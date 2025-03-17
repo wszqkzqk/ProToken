@@ -46,7 +46,7 @@ def get_residues_by_range(chain, start, end):
 def compute_domain_distances(pdb_file, chain_id):
     """
     For each MODEL in the PDB file, compute centroids for:
-      - CORE domain: residues 1-29
+      - CORE domain: residues 1 to 29, 68 to 117, and 161 to 214
       - NMPbd domain: residues 30-67
       - LIDbd domain: residues 118-167
     Then calculate the distances between CORE and NMPbd, and between CORE and LIDbd.
@@ -66,7 +66,12 @@ def compute_domain_distances(pdb_file, chain_id):
             continue
 
         # Get residues for each domain
-        core_residues = get_residues_by_range(chain, 1, 29)
+        # CORE domain now consists of three segments
+        core_residues1 = get_residues_by_range(chain, 1, 29)
+        core_residues2 = get_residues_by_range(chain, 68, 117)
+        core_residues3 = get_residues_by_range(chain, 161, 214)
+        core_residues = core_residues1 + core_residues2 + core_residues3
+        
         nmp_residues = get_residues_by_range(chain, 30, 67)
         lid_residues = get_residues_by_range(chain, 118, 167)
 
