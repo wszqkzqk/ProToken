@@ -149,7 +149,7 @@ if __name__ == "__main__":
                         help="Full path for the first pkl file")
     parser.add_argument("--pkl2", type=str,
                         help="Full path for the second pkl file")
-    parser.add_argument("--output", type=str, required=True,
+    parser.add_argument("-o", "--output", type=str, required=True,
                         help="Directory to save the results")
     args = parser.parse_args()
 
