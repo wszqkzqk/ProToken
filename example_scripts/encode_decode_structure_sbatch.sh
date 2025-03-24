@@ -9,6 +9,7 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH -t 200:00:00
 
+# salloc -p gpu31 -J zqk2 --nodes=1 --gres=gpu:1 --ntasks-per-node=8 -t 200:00:00
 ### add PROTOKEN modules into python path
 export PYTHONPATH=./PROTOKEN
 mkdir -p ./pdbs/result
