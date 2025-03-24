@@ -12,11 +12,10 @@ def parse_args():
     )
     parser.add_argument("pdb_file", help="Path to the input PDB file containing multiple MODEL frames")
     parser.add_argument("-c", "--chain", default="A", help="Chain ID (default: A)")
-    parser.add_argument("--arg_res", type=int, default=131, help="Residue number for Arg (default: 131)")
-    parser.add_argument("--asp_res", type=int, default=146, help="Residue number for Asp (default: 146)")
-    # Default atoms: using CA for Arg since the provided PDB snippet only contains backbone atoms.
-    parser.add_argument("--arg_atom", default="CA", help="Atom name in Arg residue (default: CA)")
-    parser.add_argument("--asp_atom", default="CA", help="Atom name in Asp residue (default: CA)")
+    parser.add_argument("--arg-res", type=int, default=131, help="Residue number for Arg (default: 131)")
+    parser.add_argument("--asp-res", type=int, default=146, help="Residue number for Asp (default: 146)")
+    parser.add_argument("--arg-atom", default="NH1", help="Atom name in Arg residue (default: NH1)")
+    parser.add_argument("--asp-atom", default="OD1", help="Atom name in Asp residue (default: OD1)")
     parser.add_argument("-o", "--output", default="distance_plot.png", help="Output image file (png or svg)")
     return parser.parse_args()
 
@@ -52,7 +51,7 @@ def compute_distances(pdb_file, chain_id, arg_res, asp_res, arg_atom_name, asp_a
             model_ids.append(model.id)
     return model_ids, distances
 
-def plot_distances(model_ids, distances, output_file):
+def plot_distances(model_ids, distances, output_file, arg_atom_name, asp_atom_name):
     """
     Plot the distance vs. model frame and save the figure.
     The plot labels and title are in English.
@@ -61,7 +60,7 @@ def plot_distances(model_ids, distances, output_file):
     plt.plot(model_ids, distances, marker='o', linestyle='-', color='blue')
     plt.xlabel("Model Frame Number")
     plt.ylabel("Distance (Å)")
-    plt.title("Distance between Arg131 and Asp146 vs. Model Frame")
+    plt.title(f"Distance between Arg131 ({arg_atom_name}) and Asp146 ({asp_atom_name}) vs. Model Frame")
     plt.grid(True)
     plt.tight_layout()
     plt.savefig(output_file)
@@ -77,7 +76,7 @@ def main():
         arg_atom_name=args.arg_atom,
         asp_atom_name=args.asp_atom
     )
-    plot_distances(model_ids, distances, args.output)
+    plot_distances(model_ids, distances, args.output, args.arg_atom, args.asp_atom)
 
 if __name__ == "__main__":
     main()
