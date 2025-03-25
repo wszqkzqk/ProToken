@@ -12,6 +12,7 @@ import pickle as pkl
 import numpy as np
 from tqdm import tqdm
 import argparse
+import math
 
 from functools import partial
 from src.model.diffusion_transformer import DiffusionTransformer
@@ -24,19 +25,99 @@ from configs.global_config import global_config
 from configs.dit_config import dit_config
 global_config.dropout_flag = False 
 
+# Add configuration class to manage model parameters
+class ModelConfig:
+    def __init__(self, batch_size=100, nres=512):
+        # Basic settings
+        self.nres = nres
+        self.dim_emb = None  # Will be set after loading embeddings
+        
+        # Device and batch size
+        self.ndevices = len(jax.devices())
+        self.batch_size = batch_size
+        self.adjust_batch_size()
+        
+    def adjust_batch_size(self):
+        """Adjust batch_size to fit the number of devices"""
+        self.nsample_per_device = math.ceil(self.batch_size / self.ndevices)
+        self.batch_size = self.nsample_per_device * self.ndevices
+        return self.batch_size
+        
+    def set_embedding_dim(self, protoken_dim, aatype_dim):
+        """Set embedding dimension"""
+        self.dim_emb = protoken_dim + aatype_dim
+        
+# Add interpolation function
+def interpolate_latent(start_point, end_point, config, method='linear', 
+                      distribution='uniform', num_points=None):
+    # Determine the number of interpolation points
+    num_points = num_points if num_points is not None else config.batch_size
+    
+    # Generate interpolation coefficients based on distribution type
+    if distribution == 'uniform':
+        lambda_arr = np.linspace(0, 1, num_points)
+    elif distribution == 'gaussian':
+        # Gaussian distribution, denser in the middle region
+        x = np.linspace(-2, 2, num_points)
+        lambda_arr = 1 / (1 + np.exp(-x))  # Sigmoid function maps values to (0,1)
+        lambda_arr = (lambda_arr - lambda_arr[0]) / (lambda_arr[-1] - lambda_arr[0])  # Normalize to [0,1]
+    elif distribution == 'logspace':
+        # Logarithmic distribution, denser near the start
+        lambda_arr = np.logspace(-3, 0, num_points)
+        lambda_arr = lambda_arr / lambda_arr[-1]  # Normalize to [0,1]
+    else:
+        raise ValueError(f"Unsupported distribution type: {distribution}")
+    
+    # Calculate interpolation points based on method
+    interpolated_points = []
+    if method == 'linear':
+        for i in range(num_points):
+            interpolated_points.append(
+                ((1.0 - lambda_arr[i]) * start_point + lambda_arr[i] * end_point)
+            )
+    elif method == 'spherical':
+        # Spherical interpolation (SLERP)
+        # Smooth rotational interpolation for vector data
+        for i in range(num_points):
+            t = lambda_arr[i]
+            interp_point = (jnp.sin((1-t)*math.pi/2) * start_point + 
+                           jnp.sin(t*math.pi/2) * end_point) / jnp.sin(math.pi/2)
+            interpolated_points.append(interp_point)
+    else:
+        raise ValueError(f"Unsupported interpolation method: {method}")
+    
+    # Convert to correct shape
+    points_array = jnp.array(interpolated_points)
+    
+    # Ensure the number of points matches batch_size
+    if num_points != config.batch_size:
+        if num_points < config.batch_size:
+            # Resample to more points
+            indices = np.linspace(0, num_points-1, config.batch_size).astype(int)
+            points_array = points_array[indices]
+        else:
+            # Truncate to batch_size
+            points_array = points_array[:config.batch_size]
+    
+    # Reshape to device-friendly shape
+    return points_array.reshape(config.ndevices, config.nsample_per_device, *points_array.shape[1:])
+
 ### Load embedding 
 with open('../embeddings/protoken_emb.pkl', 'rb') as f:
     protoken_emb = jnp.array(pkl.load(f), dtype=jnp.float32)
 with open('../embeddings/aatype_emb.pkl', 'rb') as f:
     aatype_emb = jnp.array(pkl.load(f), dtype=jnp.float32)
 
-#### constants
-NRES = 512 ### test in ProToken paper (2024.07) Nres = 256
-NSAMPLE_PER_DEVICE = 100
-DIM_EMB = protoken_emb.shape[-1] + aatype_emb.shape[-1] # 40 # 32 + 8
-NDEVICES = len(jax.devices())
+#### Initialize configuration
+config = ModelConfig(batch_size=100, nres=512)
+config.set_embedding_dim(protoken_emb.shape[-1], aatype_emb.shape[-1])
 
-BATCH_SIZE = NSAMPLE_PER_DEVICE * NDEVICES
+#### constants
+NRES = config.nres
+DIM_EMB = config.dim_emb
+NDEVICES = config.ndevices
+BATCH_SIZE = config.batch_size
+NSAMPLE_PER_DEVICE = config.nsample_per_device
 
 #### function utils 
 
@@ -151,7 +232,29 @@ if __name__ == "__main__":
                         help="Full path for the second pkl file")
     parser.add_argument("-o", "--output", type=str, required=True,
                         help="Directory to save the results")
+    # Add new arguments to control interpolation
+    parser.add_argument("--batch-size", type=int, default=100,
+                        help="Batch size for generation")
+    parser.add_argument("--interp-method", type=str, default="linear", 
+                        choices=["linear", "spherical"],
+                        help="Interpolation method: linear or spherical")
+    parser.add_argument("--interp-distribution", type=str, default="uniform",
+                        choices=["uniform", "gaussian", "logspace"],
+                        help="Distribution of interpolation points")
+    parser.add_argument("--num-points", type=int, default=None,
+                        help="Number of interpolation points (defaults to batch size)")
     args = parser.parse_args()
+    
+    # Update configuration
+    config = ModelConfig(batch_size=args.batch_size, nres=NRES)
+    config.set_embedding_dim(protoken_emb.shape[-1], aatype_emb.shape[-1])
+    
+    # Reset constants
+    NRES = config.nres
+    DIM_EMB = config.dim_emb
+    NDEVICES = config.ndevices
+    BATCH_SIZE = config.batch_size
+    NSAMPLE_PER_DEVICE = config.nsample_per_device
 
     pkl_list = [args.pkl1] * (BATCH_SIZE // 2) + [args.pkl2] * (BATCH_SIZE // 2)
     data_dicts = []
@@ -179,17 +282,17 @@ if __name__ == "__main__":
     xT = pjit_solve_ode(0, scheduler.num_timesteps, 1.0, x0, data_dict['seq_mask'], data_dict['residue_index'])
     xT_np = np.array(xT)
 
-    lambda_arr = np.linspace(0, 1, BATCH_SIZE) # May try other interpolation schemes
-
+    # Use the encapsulated interpolation function
     xT = xT.reshape(BATCH_SIZE, NRES, DIM_EMB)
-    xT_A, xT_B = xT[0], xT[-1] ## end-point
-    xT_interpolation = []
-
-    for i in range(BATCH_SIZE):
-        xT_interpolation.append(
-            ((1.0 - lambda_arr[i]) * xT_A + lambda_arr[i] * xT_B)
-        )
-    xT_interpolation = jnp.array(xT_interpolation).reshape(NDEVICES, NSAMPLE_PER_DEVICE, NRES, DIM_EMB)
+    xT_A, xT_B = xT[0], xT[-1]  # Endpoints
+    
+    # Use the new interpolation function
+    xT_interpolation = interpolate_latent(
+        xT_A, xT_B, config, 
+        method=args.interp_method,
+        distribution=args.interp_distribution,
+        num_points=args.num_points
+    )
 
     # Backward PF-ODE: latent -> data
     x0_interpolation = pjit_solve_ode(scheduler.num_timesteps, 0, -1.0, 
