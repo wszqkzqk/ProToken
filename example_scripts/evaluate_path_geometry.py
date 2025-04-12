@@ -22,7 +22,7 @@ def main():
     parser.add_argument("ref_end", help="Path to the reference End PDB file.")
     parser.add_argument(
         "--select",
-        default="backbone or (protein and (name N CA C O))",
+        default="protein and (name CA)",
         help="MDAnalysis selection string for backbone atoms."
     )
     parser.add_argument(
