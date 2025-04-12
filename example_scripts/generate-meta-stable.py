@@ -48,56 +48,19 @@ class ModelConfig:
         self.dim_emb = protoken_dim + aatype_dim
         
 # Add interpolation function
-def interpolate_latent(start_point, end_point, config, method='linear', 
-                      distribution='uniform', num_points=None):
-    # Determine the number of interpolation points
-    num_points = num_points if num_points is not None else config.batch_size
-    
-    # Generate interpolation coefficients based on distribution type
-    if distribution == 'uniform':
-        lambda_arr = np.linspace(0, 1, num_points)
-    elif distribution == 'gaussian':
-        # Gaussian distribution, denser in the middle region
-        x = np.linspace(-2, 2, num_points)
-        lambda_arr = 1 / (1 + np.exp(-x))  # Sigmoid function maps values to (0,1)
-        lambda_arr = (lambda_arr - lambda_arr[0]) / (lambda_arr[-1] - lambda_arr[0])  # Normalize to [0,1]
-    elif distribution == 'logspace':
-        # Logarithmic distribution, denser near the start
-        lambda_arr = np.logspace(-3, 0, num_points)
-        lambda_arr = lambda_arr / lambda_arr[-1]  # Normalize to [0,1]
-    else:
-        raise ValueError(f"Unsupported distribution type: {distribution}")
+def interpolate_latent(start_point, end_point, config):
+    # Generate interpolation coefficients
+    lambda_arr = np.linspace(0, 1, config.batch_size)
     
     # Calculate interpolation points based on method
     interpolated_points = []
-    if method == 'linear':
-        for i in range(num_points):
-            interpolated_points.append(
-                ((1.0 - lambda_arr[i]) * start_point + lambda_arr[i] * end_point)
-            )
-    elif method == 'spherical':
-        # Spherical interpolation (SLERP)
-        # Smooth rotational interpolation for vector data
-        for i in range(num_points):
-            t = lambda_arr[i]
-            interp_point = (jnp.sin((1-t)*math.pi/2) * start_point + 
-                           jnp.sin(t*math.pi/2) * end_point) / jnp.sin(math.pi/2)
-            interpolated_points.append(interp_point)
-    else:
-        raise ValueError(f"Unsupported interpolation method: {method}")
+    for i in range(config.batch_size):
+        interpolated_points.append(
+            ((1.0 - lambda_arr[i]) * start_point + lambda_arr[i] * end_point)
+        )
     
     # Convert to correct shape
     points_array = jnp.array(interpolated_points)
-    
-    # Ensure the number of points matches batch_size
-    if num_points != config.batch_size:
-        if num_points < config.batch_size:
-            # Resample to more points
-            indices = np.linspace(0, num_points-1, config.batch_size).astype(int)
-            points_array = points_array[indices]
-        else:
-            # Truncate to batch_size
-            points_array = points_array[:config.batch_size]
     
     # Reshape to device-friendly shape
     return points_array.reshape(config.ndevices, config.nsample_per_device, *points_array.shape[1:])
@@ -235,18 +198,14 @@ if __name__ == "__main__":
     # Add new arguments to control interpolation
     parser.add_argument("--batch-size", type=int, default=100,
                         help="Batch size for generation")
-    parser.add_argument("--interp-method", type=str, default="linear", 
-                        choices=["linear", "spherical"],
-                        help="Interpolation method: linear or spherical")
-    parser.add_argument("--interp-distribution", type=str, default="uniform",
-                        choices=["uniform", "gaussian", "logspace"],
-                        help="Distribution of interpolation points")
     parser.add_argument("--num-points", type=int, default=None,
                         help="Number of interpolation points (defaults to batch size)")
+    parser.add_argument("--nres", type=int, default=512,
+                        help="Number of residues in the protein sequence")
     args = parser.parse_args()
     
     # Update configuration
-    config = ModelConfig(batch_size=args.batch_size, nres=NRES)
+    config = ModelConfig(batch_size=args.batch_size, nres=args.nres)
     config.set_embedding_dim(protoken_emb.shape[-1], aatype_emb.shape[-1])
     
     # Reset constants
@@ -288,10 +247,7 @@ if __name__ == "__main__":
     
     # Use the new interpolation function
     xT_interpolation = interpolate_latent(
-        xT_A, xT_B, config, 
-        method=args.interp_method,
-        distribution=args.interp_distribution,
-        num_points=args.num_points
+        xT_A, xT_B, config
     )
 
     # Backward PF-ODE: latent -> data

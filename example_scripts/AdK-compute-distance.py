@@ -14,8 +14,8 @@ def parse_args():
     parser.add_argument("-c", "--chain", default="A", help="Chain ID (default: A)")
     parser.add_argument("--arg-res", type=int, default=131, help="Residue number for Arg (default: 131)")
     parser.add_argument("--asp-res", type=int, default=146, help="Residue number for Asp (default: 146)")
-    parser.add_argument("--arg-atom", default="NH1", help="Atom name in Arg residue (default: NH1)")
-    parser.add_argument("--asp-atom", default="OD1", help="Atom name in Asp residue (default: OD1)")
+    parser.add_argument("--arg-atom", default="CZ", help="Atom name in Arg residue (default: CZ)")
+    parser.add_argument("--asp-atom", default="CG", help="Atom name in Asp residue (default: CG)")
     parser.add_argument("-o", "--output", default="distance_plot.png", help="Output image file (png or svg)")
     return parser.parse_args()
 
