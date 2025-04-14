@@ -33,7 +33,11 @@ Before running scripts, download pre-trained checkpoints of **ProToken** encoder
 
 <p align="center"><img src="https://github.com/issacAzazel/ProToken/blob/main/figs/recon.png" width="100%"></p>
 
-[``example_scripts/encode_decode_structure.sh``](example_scripts/encode_decode_structure.sh) and [``example_scripts/encode_decode_structure_batch.sh``](example_scripts/encode_decode_structure_batch.sh) illustrate how to encode structure (in .pdb format) or structures (a directory of pdb files) into **ProTokens**, and decode them back into reconstructed structure(s). 
+[``example_scripts/encode_decode_structure.sh``](example_scripts/encode_decode_structure.sh) and [``example_scripts/encode_decode_structure_batch.sh``](example_scripts/encode_decode_structure_batch.sh) illustrate how to encode structure (in .pdb format) or structures (a directory of pdb files) into **ProTokens**, and decode them back into reconstructed structure(s). The resulting ProTokens are saved in `vq_code_indexes.pkl` or `vq_code_indexes_dict.pkl` file. 
+
+For applications requiring continuous *embeddings* rather than discrete *tokens*, all ProToken embeddings (32-dimensional vectors) are archived in [``protoken_emb.pkl``](embeddings/protoken_emb.pkl) as a 512×32 array. Structure embeddings can be retrieved by array indexing with the corresponding ProToken identifiers.
+
+We also provide a [Colab notebook](https://colab.research.google.com/drive/15bBbfa7WigruoME089cSfE242K1MvRGz) for ProToken encoding and decoding process. 
 
 ### Protein Engineering via Diffusion Transformer over Unified Sequence and Structure Representations
 **ProTokens** provide a unified perspective on protein sequences and structures. **PT-DiT**, a [diffusion transformer](https://www.wpeebles.com/DiT.html) that models the joint probability of protein sequences and structures, can co-generate diverse proteins in the form of compatible sequence/structure pairs. 
