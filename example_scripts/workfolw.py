@@ -18,20 +18,17 @@ logging.getLogger('').addHandler(console)
 
 # List of PDB pairs
 pdb_pairs = [
-    "7SJO_F;7SJP_L",
-    "7SJO_H;7SJP_H",
-    "7TUC_A;7TUE_A",
+    # "7SJO_F;7SJP_L",
+    # "7SJO_H;7SJP_H",
+    # "7TUC_A;7TUE_A",
     "7WKP_A;7WWU_I",
-    "7YCO_B;8H6F_X",
-    "7ZF5_F;7ZF6_L",
+    # "7YCO_B;8H6F_X",
+    # "7ZF5_F;7ZF6_L",
     "8BDV_A;8BH7_A",
-    "8DKF_L;8DOW_D",
+    # "8DKF_L;8DOW_D",
     "8EE5_H;8EF3_A",
     "8EE5_L;8EF3_B",
-    "8FWF_L;8FYM_L",
     "8HC3_H;8HC5_H",
-    "8JSG_A;8JSH_A",
-    "8TCA_L;8VEV_B",
 ]
 
 # Path definitions

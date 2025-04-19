@@ -201,21 +201,18 @@ def main():
 
         # Plot 2: Deviation RMSD Scatter Plot
         fig_scatter, ax_scatter = plt.subplots(figsize=(8, 7))
-        # Color points by frame index to see progression (optional)
+        # Color points by frame index
         scatter_colors = frames
         sc = ax_scatter.scatter(results_np['rmsd_to_start'], results_np['rmsd_to_end'],
-                                c=scatter_colors, cmap='viridis', s=10, alpha=0.7,
+                                c=scatter_colors, cmap='seismic', s=10, alpha=0.7,
                                 label='Frames (color=Frame Index)')
-        # Highlight deviating points
-        deviating_mask = results_np['is_deviating']
-        ax_scatter.scatter(results_np['rmsd_to_start'][deviating_mask], results_np['rmsd_to_end'][deviating_mask],
-                           facecolors='none', edgecolors='red', s=30, label=f'Deviating (Both RMSD > {args.deviation_threshold_multiplier:.1f}*RMSDse = {deviation_rmsd_threshold_value:.2f} Å)')
-
         ax_scatter.set_xlabel(f"RMSD to Start ({os.path.basename(args.ref_start)}) (Å)")
         ax_scatter.set_ylabel(f"RMSD to End ({os.path.basename(args.ref_end)}) (Å)")
         ax_scatter.set_title('Path Deviation Analysis')
+        # Keep threshold lines as reference, update label conditionally
+        threshold_label = f'RMSD(Start,End) ({deviation_rmsd_threshold_value:.2f} Å)' if args.deviation_threshold_multiplier == 1.0 else f'RMSD(Start,End) * {args.deviation_threshold_multiplier:.1f} ({deviation_rmsd_threshold_value:.2f} Å)'
         ax_scatter.axhline(deviation_rmsd_threshold_value, color='grey', linestyle=':', alpha=0.7)
-        ax_scatter.axvline(deviation_rmsd_threshold_value, color='grey', linestyle=':', alpha=0.7, label=f'Deviation Threshold ({deviation_rmsd_threshold_value:.2f}Å)')
+        ax_scatter.axvline(deviation_rmsd_threshold_value, color='grey', linestyle=':', alpha=0.7, label=threshold_label) # Use conditional label
         ax_scatter.grid(True, alpha=0.3)
         ax_scatter.legend(fontsize='small')
         cbar = fig_scatter.colorbar(sc)
