@@ -253,7 +253,7 @@ def main():
             xy = deviation_data[class_member_mask]
             ax_scatter.scatter(xy[:, 0], xy[:, 1], 
                            marker=marker, 
-                           s=markersize**3, 
+                           s=markersize**2.5, 
                            c=[col], 
                            edgecolors='none',  # Remove borders for better visibility in dense regions
                            alpha=0.8 if k != -1 else 0.6, 
