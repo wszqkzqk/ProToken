@@ -81,7 +81,7 @@ def select_key_atoms(displacements, target_global_indices, method="percentile", 
         print(f"Warning: No atoms selected with displacement > {cutoff:.3f}. Check structures or threshold.")
         # Optionally select top N if none meet criteria (adjust N as needed)
         if len(displacements) > 0:
-             num_to_select = min(10, len(displacements)) # Select top 10 or fewer
+             num_to_select = min(20, len(displacements)) # Select top 20 or fewer
              print(f"No atoms exceeded threshold. Selecting the top {num_to_select} most displaced atoms instead.")
              sorted_disp_indices = np.argsort(displacements)[::-1] # Indices sorted by displacement values (desc)
              indices_meeting_criteria = sorted_disp_indices[:num_to_select]
