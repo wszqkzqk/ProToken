@@ -24,6 +24,9 @@ Running example scripts in [example_scripts](./example_scripts) requires:
 
 In theory, any environment compatible with the packages mentioned above should run successfully. We also provide [requirements.txt](requirements.txt) which can directly create a compatible environment via `pip install -r requirements.txt` (with possible redundant dependencies). Our configuration includes Ubuntu 22.04 (GNU/Linux x86_64), NVIDIA A100-SXM4-80GB, CUDA 12.2 and Anaconda 23.7.2. The complete notebook execution takes approximately 0.5 hours.
 
+### Remark
+We implement [FlashAttention](https://github.com/Dao-AILab/flash-attention) to accelerate PT-DiT inference. Note that protein sequences must be padded such that their length (`NRES`) becomes a multiple of 128 for compatibility. Users may disable this feature by setting `flash_attention_flag = False` in the configuration file ([dit_config.py](configs/dit_config.py)).
+
 ## Exploring ProTokens's capabilities!
 Before running scripts, download pre-trained checkpoints of **ProToken** encoder/decoder and **PT-DiT** in [here](https://drive.google.com/drive/folders/1sO_FQh1AF4iEQnV2W4_Px29QVA0WN7QM), and move them into [ckpts](ckpts).
 
