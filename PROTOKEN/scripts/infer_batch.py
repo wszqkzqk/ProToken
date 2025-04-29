@@ -234,10 +234,12 @@ def inference(pdb_dir_path, save_dir_path, load_ckpt_path,
         
         code_count_array.append(aux_result_["code_count"])
         
+        vq_indexes_np = np.asarray(aux_result_["vq_indexes"])
+        seq_mask_np = np.asarray(aux_result_['seq_mask'])
         for idx, pdb_name in enumerate(pdb_names):
             # select vq indexes according to the seq_mask
-            tmp_vq_indexes = np.asarray([aux_result_["vq_indexes"][idx][p] for p in range(len(aux_result_['seq_mask'][idx])) \
-                                            if aux_result_['seq_mask'][idx][p]])
+            tmp_vq_indexes = np.asarray([vq_indexes_np[idx][p] for p in range(len(seq_mask_np[idx])) \
+                                            if seq_mask_np[idx][p]])
             vq_code_indexes_dict[pdb_name] = tmp_vq_indexes
             # print(len(vq_code_indexes_dict[pdb_name]))
             
