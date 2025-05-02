@@ -204,10 +204,10 @@ def main():
         # Color points by frame index
         scatter_colors = frames
         sc = ax_scatter.scatter(results_np['rmsd_to_start'], results_np['rmsd_to_end'],
-                                c=scatter_colors, cmap='seismic', s=10, alpha=0.7,
+                                c=scatter_colors, cmap='viridis', s=10, alpha=0.7,
                                 label='Frames (color=Frame Index)')
-        ax_scatter.set_xlabel(f"RMSD to Start ({os.path.basename(args.ref_start)}) (Å)")
-        ax_scatter.set_ylabel(f"RMSD to End ({os.path.basename(args.ref_end)}) (Å)")
+        ax_scatter.set_xlabel(f"RMSD to Start (Å)")
+        ax_scatter.set_ylabel(f"RMSD to End (Å)")
         ax_scatter.set_title('Path Deviation Analysis')
         # Keep threshold lines as reference, update label conditionally
         threshold_label = f'RMSD(Start,End) ({deviation_rmsd_threshold_value:.2f} Å)' if args.deviation_threshold_multiplier == 1.0 else f'RMSD(Start,End) * {args.deviation_threshold_multiplier:.1f} ({deviation_rmsd_threshold_value:.2f} Å)'

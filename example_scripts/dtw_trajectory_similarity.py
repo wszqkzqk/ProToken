@@ -142,6 +142,7 @@ def calculate_dtw_on_pca(
         np.ndarray: Projected coordinates for trajectory 1.
         np.ndarray: Projected coordinates for trajectory 2.
         object: DTW path information from dtaidistance.
+        PCA: PCA object used for projection.
     """
     # 1. Align trajectories and get coordinates
     # Align u2 to the first frame of u1 for a common reference frame
@@ -192,7 +193,7 @@ def calculate_dtw_on_pca(
 
     # Note: 'paths' here is the accumulated cost matrix from dtaidistance,
     # suitable for dtwvis.plot_warpingpaths
-    return distance, proj_coords1, proj_coords2, paths
+    return distance, proj_coords1, proj_coords2, paths, pca
 
 
 if __name__ == "__main__":
@@ -200,14 +201,14 @@ if __name__ == "__main__":
         description="Calculate DTW path similarity on PCA-projected coordinates. Automatically uses PDB trajectories as topologies if no specific topology file is given."
     )
     # Trajectory Arguments
-    parser.add_argument("traj1", help="First trajectory file path (e.g., PDB, DCD, XTC).")
-    parser.add_argument("traj2", help="Second trajectory file path (e.g., PDB, DCD, XTC).")
+    parser.add_argument("traj1", help="SMD's trajectory file path (e.g., PDB, DCD, XTC).")
+    parser.add_argument("traj2", help="ProToken's trajectory file path (e.g., PDB, DCD, XTC).")
     # Optional Topology Arguments
     parser.add_argument("--topology1", default=None, help="Optional topology file for trajectory 1.")
     parser.add_argument("--topology2", default=None, help="Optional topology file for trajectory 2.")
     # Calculation Parameters
     parser.add_argument(
-        "-s", "--atom-selection", default="protein and name CA",
+        "--atom-selection", default="protein and name CA",
         help="Atom selection string for alignment and PCA (MDAnalysis syntax)."
     )
     parser.add_argument(
@@ -217,6 +218,9 @@ if __name__ == "__main__":
     # Output Arguments
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("-o", "--output", default="dtw_pca_paths.png", help="Output filename for DTW path visualization")
+    # New reference structure arguments
+    parser.add_argument('-s', "--start-struct", default=None, help="Optional PDB for start reference")
+    parser.add_argument('-e', "--end-struct", default=None, help="Optional PDB for end reference")
 
     args = parser.parse_args()
 
@@ -226,12 +230,27 @@ if __name__ == "__main__":
         u2 = load_universe(args.traj2, args.topology2, args.verbose)
 
         # --- Perform PCA and DTW ---
-        dtw_distance, proj1, proj2, dtw_acc_cost_matrix = calculate_dtw_on_pca(
+        dtw_distance, proj1, proj2, dtw_acc_cost_matrix, pca = calculate_dtw_on_pca(
             u1, u2,
             atom_selection=args.atom_selection,
             n_pca_components=args.n_components,
             verbose=args.verbose
         )
+
+        # Load and project reference structures
+        proj_start = proj_end = None
+        if args.start_struct:
+            if not os.path.exists(args.start_struct):
+                raise FileNotFoundError(f"Start structure not found: {args.start_struct}")
+            start_u = load_universe(args.start_struct, None, args.verbose)
+            coords_s, _ = get_aligned_coords(start_u, args.atom_selection, ref_universe=u1, verbose=False)
+            proj_start = pca.transform(coords_s)
+        if args.end_struct:
+            if not os.path.exists(args.end_struct):
+                raise FileNotFoundError(f"End structure not found: {args.end_struct}")
+            end_u = load_universe(args.end_struct, None, args.verbose)
+            coords_e, _ = get_aligned_coords(end_u, args.atom_selection, ref_universe=u1, verbose=False)
+            proj_end = pca.transform(coords_e)
 
         # --- Process and Plot Results ---
         if np.isfinite(dtw_distance):
@@ -240,27 +259,40 @@ if __name__ == "__main__":
             if proj1 is not None and proj2 is not None and dtw_acc_cost_matrix is not None:
                 try:
                     # --- NEW Plotting Code ---
-                    fig, axs = plt.subplots(1, 2, figsize=(14, 6), sharex=True, sharey=True) # 1 row, 2 columns
+                    fig, axs = plt.subplots(1, 2, figsize=(14, 5), sharex=True, sharey=True) # Slightly increased height for legend
                     fig.suptitle(f"DTW Path Comparison (PCA Space, Dist={dtw_distance:.2f})", fontsize=14)
 
                     # --- Plot 1: Path Overlay ---
                     ax1 = axs[0]
+                    # Use shorter basenames for legend
                     basename1 = os.path.basename(args.traj1)
                     basename2 = os.path.basename(args.traj2)
+                    label1 = f'Traj 1 ({basename1})'
+                    label2 = f'Traj 2 ({basename2})'
+                    max_label_len = 25 # Limit length if needed
+                    if len(label1) > max_label_len: label1 = label1[:max_label_len-3] + '...'
+                    if len(label2) > max_label_len: label2 = label2[:max_label_len-3] + '...'
 
-                    # Plot paths
-                    ax1.plot(proj1[:, 0], proj1[:, 1], 'o-', label=f'Traj 1 (Steered MD)', alpha=0.7, markersize=3, linewidth=1)
-                    ax1.plot(proj2[:, 0], proj2[:, 1], 's-', label=f'Traj 2 (ProToken)', alpha=0.7, markersize=3, linewidth=1)
+
+                    # Plot paths and store handles/labels implicitly via labels
+                    ax1.plot(proj1[:, 0], proj1[:, 1], 'o-', label=label1, alpha=0.7, markersize=3, linewidth=1)
+                    ax1.plot(proj2[:, 0], proj2[:, 1], 's-', label=label2, alpha=0.7, markersize=3, linewidth=1)
+
+                    # Annotate reference structures
+                    if proj_start is not None:
+                        ax1.plot(proj_start[0, 0], proj_start[0, 1], 'ko', markersize=8, label='Start Ref')
+                    if proj_end is not None:
+                        ax1.plot(proj_end[0, 0], proj_end[0, 1], 'k^', markersize=8, label='End Ref')
 
                     # Mark start and end points
-                    ax1.plot(proj1[0, 0], proj1[0, 1], 'go', markersize=8, label='Traj 1 Start')
-                    ax1.plot(proj1[-1, 0], proj1[-1, 1], 'g^', markersize=8, label='Traj 1 End')
-                    ax1.plot(proj2[0, 0], proj2[0, 1], 'ro', markersize=8, label='Traj 2 Start')
-                    ax1.plot(proj2[-1, 0], proj2[-1, 1], 'r^', markersize=8, label='Traj 2 End')
-
+                    ax1.plot(proj1[0, 0], proj1[0, 1], 'gx', markersize=8, label='Traj 1 Start')
+                    ax1.plot(proj1[-1, 0], proj1[-1, 1], 'g+', markersize=8, label='Traj 1 End')
+                    ax1.plot(proj2[0, 0], proj2[0, 1], 'mx', markersize=8, label='Traj 2 Start')
+                    ax1.plot(proj2[-1, 0], proj2[-1, 1], 'm+', markersize=8, label='Traj 2 End')
                     ax1.set_xlabel("PC 1")
                     ax1.set_ylabel("PC 2")
-                    ax1.legend(fontsize='small')
+
+                    # ax1.legend(fontsize='small', loc='upper left')
                     ax1.set_title("Paths in PCA Space (PC1 vs PC2)")
                     ax1.set_aspect('equal', adjustable='box')
                     ax1.grid(True, linestyle='--', alpha=0.6)
@@ -269,7 +301,7 @@ if __name__ == "__main__":
                     ax2 = axs[1]
                     best_path = dtw.best_path(dtw_acc_cost_matrix) # Use dtaidistance helper
 
-                    # Plot original paths lightly
+                    # Plot original paths lightly (no labels needed for figure legend)
                     ax2.plot(proj1[:, 0], proj1[:, 1], '-', color='C0', alpha=0.3, linewidth=1)
                     ax2.plot(proj2[:, 0], proj2[:, 1], '-', color='C1', alpha=0.3, linewidth=1)
 
@@ -281,11 +313,17 @@ if __name__ == "__main__":
                                       [proj1[idx1, 1], proj2[idx2, 1]],
                                       '-', color='gray', linewidth=0.5, alpha=0.4)
 
-                    # Re-plot start/end points on top for clarity
-                    ax2.plot(proj1[0, 0], proj1[0, 1], 'go', markersize=8)
-                    ax2.plot(proj1[-1, 0], proj1[-1, 1], 'g^', markersize=8)
-                    ax2.plot(proj2[0, 0], proj2[0, 1], 'ro', markersize=8)
-                    ax2.plot(proj2[-1, 0], proj2[-1, 1], 'r^', markersize=8)
+                    # Annotate reference structures (no labels needed)
+                    if proj_start is not None:
+                        ax2.plot(proj_start[0, 0], proj_start[0, 1], 'ko', markersize=8)
+                    if proj_end is not None:
+                        ax2.plot(proj_end[0, 0], proj_end[0, 1], 'k^', markersize=8)
+
+                    # Re-plot start/end points on top for clarity (no labels needed)
+                    ax2.plot(proj1[0, 0], proj1[0, 1], 'gx', markersize=8)
+                    ax2.plot(proj1[-1, 0], proj1[-1, 1], 'g+', markersize=8)
+                    ax2.plot(proj2[0, 0], proj2[0, 1], 'mx', markersize=8)
+                    ax2.plot(proj2[-1, 0], proj2[-1, 1], 'm+', markersize=8)
 
                     ax2.set_xlabel("PC 1")
                     # ax2.set_ylabel("PC 2") # Y-axis is shared
@@ -293,8 +331,16 @@ if __name__ == "__main__":
                     ax2.set_aspect('equal', adjustable='box')
                     ax2.grid(True, linestyle='--', alpha=0.6)
 
-                    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-                    plt.savefig(args.output)
+                    # --- Create Figure Legend Below Plots ---
+                    handles, labels = ax1.get_legend_handles_labels() # Get everything from ax1
+                    # Place legend below the subplots, centered, with 4 columns
+                    fig.legend(handles, labels, fontsize='small', loc='upper left')
+
+                    # Adjust layout to make room for the figure legend and title
+                    # Increase bottom margin (rect[1]) from default ~0.1 to ~0.15 or more
+                    plt.tight_layout(rect=[0, 0.1, 1, 0.95]) # Adjust bottom margin (0.1) if legend overlaps x-labels
+
+                    plt.savefig(args.output, bbox_inches='tight') # Use bbox_inches='tight' for potentially better fitting
                     if args.verbose:
                         print(f"\nSaved DTW path visualization to {args.output}")
 
@@ -307,7 +353,6 @@ if __name__ == "__main__":
             else:
                  print("\nCalculation produced invalid results, skipping plot.")
 
-    # ... (rest of the error handling remains the same) ...
     except FileNotFoundError as fnf_err:
          print(f"\nError: {fnf_err}")
     except ValueError as ve:

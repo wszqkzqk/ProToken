@@ -248,6 +248,8 @@ def main():
         if smd_features is None:
             raise RuntimeError(f"Failed to featurize SMD trajectory: {args.smd_pdb_file}")
 
+        print(f"SMD featurization input frames: {smd_features.shape[0]}")
+
         # **Critical Check:** Verify feature dimension consistency
         if smd_features.shape[1] != expected_feature_dim:
               raise ValueError(f"Feature dimension mismatch for SMD! TICA model expects {expected_feature_dim} features, "
@@ -258,6 +260,7 @@ def main():
         Y_smd = tica_transformer.transform(smd_features)
         print(f"SMD projection successful. Shape: {Y_smd.shape}")
 
+        print(f"SMD projection output frames: {Y_smd.shape[0]}")
 
         # 4. Featurize and Project ProToken Trajectory
         pt_features = load_trajectory_and_featurize(args.protoken_pdb_file, args.feature_type, ref_traj_for_alignment)
@@ -287,15 +290,11 @@ def main():
             plot_title = f'TICA Comparison (SMD vs ProToken, Lag={lag_time}, Feat={args.feature_type})'
 
             # Plot SMD trajectory as background scatter points
-            # Slightly increase alpha for better visibility if needed, but keep it subtle
-            ax.scatter(Y_smd[:, 0], Y_smd[:, 1], alpha=0.2, s=12, color="grey", label='SMD Projection', zorder=1)
+            ax.scatter(Y_smd[:, 0], Y_smd[:, 1], alpha=0.5, s=12, color="grey", label='SMD Projection', zorder=1)
 
             # Plot ProToken trajectory points, colored by frame index
             protoken_frames = np.arange(len(Y_pt))
             path_scatter = ax.scatter(Y_pt[:, 0], Y_pt[:, 1], c=protoken_frames, cmap='viridis', s=30, label='ProToken Projection (colored by frame)', zorder=3, edgecolors='grey', linewidth=0.5)
-
-            # Add a *subtle* line connecting the points for path visualization
-            ax.plot(Y_pt[:, 0], Y_pt[:, 1], color='black', alpha=0.3, linewidth=0.7, zorder=2)
 
             # Add colorbar for ProToken frame index
             cbar = fig.colorbar(path_scatter, ax=ax)
@@ -311,7 +310,7 @@ def main():
              plot_title = f'TICA Comparison - IC1 (Lag={lag_time}, Feat={args.feature_type})'
 
              # Plot SMD IC1 vs its frame index
-             ax.plot(np.arange(len(Y_smd)), Y_smd[:, 0], alpha=0.5, color="grey", label='SMD IC1', linewidth=1.5)
+             ax.plot(np.arange(len(Y_smd)), Y_smd[:, 0], alpha=0.7, color="grey", label='SMD IC1', linewidth=1.5)
              # Plot ProToken IC1 vs its frame index
              ax.plot(np.arange(len(Y_pt)), Y_pt[:, 0], marker='o', markersize=5, linestyle='-', color='blue', label='ProToken IC1') # Changed color
 
