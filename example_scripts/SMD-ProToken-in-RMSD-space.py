@@ -32,17 +32,17 @@ def main():
         description="Compare Steered MD and ProToken trajectories in the RMSD-to-references space.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument("smd_traj", help="Path to the Steered MD multi-frame PDB trajectory file.")
-    parser.add_argument("protoken_traj", help="Path to the ProToken multi-frame PDB trajectory file.")
     parser.add_argument("ref_start", help="Path to the reference Start PDB file.")
     parser.add_argument("ref_end", help="Path to the reference End PDB file.")
+    parser.add_argument("smd_traj", help="Path to the Steered MD multi-frame PDB trajectory file.")
+    parser.add_argument("protoken_traj", help="Path to the ProToken multi-frame PDB trajectory file.")
     parser.add_argument(
         "--select",
         default="protein and (name CA)",
         help="MDAnalysis selection string for backbone atoms."
     )
     parser.add_argument("--smd_color", default='blue', help="Color for Steered MD trajectory points.")
-    parser.add_argument("--protoken_color", default='orange', help="Color for ProToken trajectory points.")
+    parser.add_argument("--protoken_color", default='chocolate', help="Color for ProToken trajectory points.")
     parser.add_argument("--smd_label", default='Steered MD', help="Label for Steered MD trajectory in legend.")
     parser.add_argument("--protoken_label", default='ProToken', help="Label for ProToken trajectory in legend.")
     parser.add_argument("--output_png",
@@ -147,9 +147,8 @@ def main():
     ax.set_ylim(max(-buffer, y_min - buffer), max(y_max + buffer, rmsd_start_vs_end_aligned + buffer))
 
 
-    # Improve legend appearance
-    legend = ax.legend(loc='best', fontsize='medium', frameon=True, shadow=True, borderpad=1)
-    legend.get_frame().set_edgecolor('black')
+    legend = ax.legend(loc='best', fontsize='medium')
+    #legend.get_frame().set_edgecolor('black')
 
 
     ax.set_aspect('equal', adjustable='box') # Make axes visually comparable
