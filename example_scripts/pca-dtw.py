@@ -157,7 +157,7 @@ def find_changing_pairs(
 def plot_difference_map(dist_diff, top_pairs_indices, title, output_path, verbose=True):
     """Plots the distance difference map, highlighting the selected pairs."""
     fig, ax = plt.subplots(figsize=(7, 6))
-    im = ax.imshow(dist_diff, cmap='Reds', origin='lower')
+    im = ax.imshow(dist_diff, cmap='Greens', origin='lower')
     ax.set_title(title)
     ax.set_xlabel("Residue Index")
     ax.set_ylabel("Residue Index")
@@ -483,7 +483,7 @@ if __name__ == "__main__":
         if args.verbose:
             print(f"\nSelected {len(selected_pairs_indices)} Cα pairs (Top {args.top_percentage*100:.1f}%).")
 
-        plot_difference_map(dist_diff, selected_pairs_indices, f"Absolute Distance Change ({len(selected_pairs_indices)} pairs selected)",
+        plot_difference_map(dist_diff, selected_pairs_indices, "Absolute Distance Change",
                              os.path.join(args.output_dir, "distance_map_difference.png"), args.verbose)
         save_selected_pairs(selected_pairs_indices, selected_pairs_info, args.output_dir, args.verbose)
 
