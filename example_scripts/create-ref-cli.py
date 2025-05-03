@@ -158,7 +158,7 @@ def extract_minimized_coords_and_write(
     print("\nStep 4b: Extracting Coords/Indices for Key Atoms using Direct Indexing...")
 
     key_coords_list = []
-    key_indices_1based_output = []
+    key_indices_output = []
     all_xponge_atoms = mol_target_minimized.atoms # Get the list of all Atom objects
 
     if not isinstance(key_atom_indices, (list, np.ndarray)):
@@ -185,7 +185,7 @@ def extract_minimized_coords_and_write(
                         xponge_atom.contents['z']
                     ]
                     key_coords_list.append(coord)
-                    key_indices_1based_output.append(index)
+                    key_indices_output.append(index)
                     valid_indices_count += 1
                 except KeyError as ke:
                     print(f"Warning: Atom at index {index} is missing coordinate data ('{ke}'). Skipping.")
@@ -211,9 +211,9 @@ def extract_minimized_coords_and_write(
         else:
              f.write("")
 
-    print(f"Writing 1-based indices of {len(key_indices_1based_output)} key atoms to: {output_index_file}")
+    print(f"Writing indices of {len(key_indices_output)} key atoms to: {output_index_file}")
     with open(output_index_file, "w") as f:
-        for index in key_indices_1based_output:
+        for index in key_indices_output:
             f.write(f"{index}\n")
 
     print("SPONGE input files generated successfully.")
