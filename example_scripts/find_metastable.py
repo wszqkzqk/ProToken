@@ -275,10 +275,10 @@ if __name__ == "__main__":
         description="Identify metastable states from SMD/ProToken comparison and extract representative ProToken frames and corresponding SMD frame clusters."
     )
     # Inputs
-    parser.add_argument("traj1", help="Path to Traj1 (SMD).")
-    parser.add_argument("traj2", help="Path to Traj2 (ProToken).")
     parser.add_argument("start_pdb", help="Path to reference start PDB.")
     parser.add_argument("end_pdb", help="Path to reference end PDB.")
+    parser.add_argument("traj1", help="Path to Traj1 (SMD).")
+    parser.add_argument("traj2", help="Path to Traj2 (ProToken).")
     parser.add_argument("selected_pairs_indices_pkl", help="Path to selected Cα pair indices (.pkl).")
     parser.add_argument("pca_model_pkl", help="Path to saved PCA model (.pkl).")
     parser.add_argument("--topology1", default=None, help="Optional topology for traj1.")
