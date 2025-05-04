@@ -161,8 +161,8 @@ def find_metastable_candidates(proj1, proj2, best_path, args):
              print(f"  Candidate: ProToken Frame={pro_rep_idx} (Ratio={ratios[j_peak]:.2f}) <-> Median SMD Frame={smd_rep_idx} (from range {min(smd_indices_peak)}-{max(smd_indices_peak)})")
 
 
-    # 5. Optional: Plot the ratio profile
-    if args.plot_ratios:
+    # 5. Plot the ratio profile
+    if not args.no_plot_ratios:
          fig, ax = plt.subplots(figsize=(10, 5))
          ax.plot(range(n_frames_pro), ratios, label='Path/Displacement Ratio', color='purple')
          ax.plot(peaks, ratios[peaks], "x", color='red', markersize=10, label='Identified Peaks')
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     parser.add_argument("proj2_pca", help="Path to the PCA projected coordinates for Traj2 (ProToken) (.pkl file).")
     parser.add_argument("dtw_path", help="Path to the best DTW alignment path (.pkl file).")
     # Parameters for Metastable State Identification
-    parser.add_argument("--min_smd_frames", type=int, default=5,
+    parser.add_argument("--min_smd_frames", type=int, default=30,
                         help="Minimum number of SMD frames mapped to a ProToken frame to consider it.")
     parser.add_argument("--exclude_end_fraction", type=float, default=0.15,
                         help="Fraction of the ProToken trajectory end to exclude from analysis (e.g., 0.15 for last 15%).")
@@ -198,7 +198,7 @@ if __name__ == "__main__":
                         help="Required prominence for peaks in the ratio profile (see scipy.signal.find_peaks).")
     # Output
     parser.add_argument("-o", "--output_dir", default="metastable_analysis", help="Directory to save outputs.")
-    parser.add_argument("--plot_ratios", action="store_true", help="Plot the calculated ratio profile.")
+    parser.add_argument("--no_plot_ratios", action="store_true", help="Disable plotting of the calculated ratio profile.")
     parser.add_argument("-v", "--verbose", action='count', default=0, help="Increase verbosity level (-v, -vv).")
 
     args = parser.parse_args()
