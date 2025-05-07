@@ -106,13 +106,13 @@ def visualize_candidate(candidate_id, pro_pdb, smd_pdb, output_dir, width=1200, 
     # Save image
     output_png = os.path.join(output_dir, f"candidate_{candidate_id}_visualization.png")
     print(f"Saving image to {output_png}...")
-    cmd.set("ray_shadows", 0)
-    cmd.set("ray_trace_fog", 0)
+    # cmd.set("ray_shadows", 0)
+    # cmd.set("ray_trace_fog", 0)
     cmd.set("antialias", 0)
-    cmd.set("cache_frames", 1)
-    cmd.set("use_shaders", True)
-    cmd.set("cartoon_sampling", 5)
-    cmd.png(output_png, width=width, height=height, dpi=dpi, ray=0)
+    # cmd.set("cache_frames", 1)
+    # cmd.set("use_shaders", True)
+    # cmd.set("cartoon_sampling", 5)
+    cmd.png(output_png, width=width, height=height, dpi=dpi, ray=1)
     print(f"--- Finished Candidate {candidate_id} ---")
 
 
