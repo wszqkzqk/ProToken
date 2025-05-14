@@ -220,7 +220,7 @@ def main():
         print("\nGenerating plots...")
 
         # Plot 1: Path Deviation Scatter Plot, colored by DBSCAN Cluster
-        fig_scatter, ax_scatter = plt.subplots(figsize=(9, 7))
+        fig_scatter, ax_scatter = plt.subplots(figsize=(8, 8)) # Adjust figsize for a square plot
         unique_labels = set(labels)
         n_clusters_real = len(unique_labels) - (1 if -1 in unique_labels else 0)
         
@@ -231,7 +231,7 @@ def main():
         else:
             # For fewer clusters, use discrete colormap to enhance distinction
             colormap = plt.cm.tab10
-            
+
         colors = colormap(np.linspace(0, 1, max(n_clusters_real, 1)))
         color_idx = 0
         
@@ -260,24 +260,30 @@ def main():
                            label=label)
 
         # Add reference positions for start and end points
-        min_x, max_x = ax_scatter.get_xlim()
-        min_y, max_y = ax_scatter.get_ylim()
+        # Determine overall min and max for square plot, ensuring origin is included or near
+        overall_min = min(0, np.min(deviation_data[:, 0]), np.min(deviation_data[:, 1])) 
+        overall_max = max(np.max(deviation_data[:, 0]), np.max(deviation_data[:, 1]))
+        
+        # Add a small padding
+        padding = (overall_max - overall_min) * 0.05 
+        plot_min = overall_min - padding if overall_min < 0 else 0 # Ensure plot starts at or before 0
+        plot_max = overall_max + padding
 
-        ax_scatter.set_xlabel(f"RMSD to Start ({os.path.basename(args.ref_start)}) (Å)")
-        ax_scatter.set_ylabel(f"RMSD to End ({os.path.basename(args.ref_end)}) (Å)")
-        ax_scatter.set_title(f'Path Deviation Analysis (DBSCAN: {n_clusters} clusters, {noise_percentage:.1f}% noise)')
-        ax_scatter.legend(fontsize='small', loc='best', framealpha=0.7)
+        ax_scatter.set_xlabel(f"RMSD to Start (Å)", fontsize=16)
+        ax_scatter.set_ylabel(f"RMSD to End (Å)", fontsize=16)
+        ax_scatter.set_title(f'Path Deviation Analysis (DBSCAN: {n_clusters} clusters, {noise_percentage:.1f}% noise)', fontsize=18)
+        ax_scatter.tick_params(axis='both', which='major', labelsize=14)
+        ax_scatter.legend(fontsize='large', loc='best', framealpha=0.7)
         ax_scatter.grid(True, alpha=0.3)
         
-        # Set axis ranges to better display the data
-        x_range = max_x - min_x
-        y_range = max_y - min_y
-        ax_scatter.set_xlim(min_x - 0.05 * x_range, max_x + 0.05 * x_range)
-        ax_scatter.set_ylim(min_y - 0.05 * y_range, max_y + 0.05 * y_range)
+        # Set axis ranges to make the plot square and cover all data
+        ax_scatter.set_xlim(plot_min, plot_max)
+        ax_scatter.set_ylim(plot_min, plot_max)
+        ax_scatter.set_aspect('equal', adjustable='box') # Make plot square
         
         fig_scatter.tight_layout()
         scatter_plot_filename = f"{args.output_prefix}_deviation_clustered.png"
-        fig_scatter.savefig(scatter_plot_filename, dpi=150)
+        fig_scatter.savefig(scatter_plot_filename, dpi=300)
         print(f"Clustered deviation scatter plot saved to: {scatter_plot_filename}")
 
 
