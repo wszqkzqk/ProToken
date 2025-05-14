@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from Bio.PDB import PDBParser
+import os
 
 def parse_args():
     """
@@ -50,7 +51,7 @@ def compute_domain_distances(pdb_file, chain_id):
       - NMPbd domain: residues 30-67
       - LIDbd domain: residues 118-167
     Then calculate the distances between CORE and NMPbd, and between CORE and LIDbd.
-    Returns lists of model IDs, CORE-LID distances, and CORE-NMP distances.
+    Returns lists of model IDs, CORE-LID distances, and CORE-NMPbd distances.
     """
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("AdK", pdb_file)
@@ -106,15 +107,39 @@ def plot_domain_distances(model_ids, core_lid, core_nmp, output_file):
     """
     plt.figure(figsize=(8, 5))
     plt.plot(model_ids, core_lid, marker='o', linestyle='-', color='blue', label="CORE-LID Distance")
-    plt.plot(model_ids, core_nmp, marker='s', linestyle='-', color='red', label="CORE-NMP Distance")
-    plt.xlabel("Model Frame Number")
-    plt.ylabel("Distance (Å)")
-    plt.title("Domain Distance Changes During Closure")
-    plt.legend()
+    plt.plot(model_ids, core_nmp, marker='s', linestyle='-', color='red', label="CORE-NMPbd Distance")
+    plt.xlabel("Model Frame Number", fontsize=12)
+    plt.ylabel("Distance (Å)", fontsize=12)
+    plt.title("Domain Distance Changes During Closure", fontsize=14)
+    plt.legend(fontsize='large')
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(output_file)
+    plt.savefig(output_file, dpi=300)
     print(f"Plot saved as {output_file}")
+
+    # PPT-friendly version with bold fonts, thicker lines and axes
+    plt.figure(figsize=(8, 5))
+    plt.plot(model_ids, core_lid, marker='o', linestyle='-', color='blue',
+             label="CORE-LID Distance", linewidth=2.5, markersize=8)
+    plt.plot(model_ids, core_nmp, marker='s', linestyle='-', color='red',
+             label="CORE-NMPbd Distance", linewidth=2.5, markersize=8)
+    plt.xlabel("Model Frame Number", fontsize=16)
+    plt.ylabel("Distance (Å)", fontsize=16)
+    plt.title("Domain Distance Changes During Closure", fontsize=18)
+    plt.legend(fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.grid(True, linewidth=1.5)
+    ax = plt.gca()
+    for spine in ax.spines.values():
+        spine.set_linewidth(2.0)
+    plt.tight_layout()
+    output_base, output_ext = os.path.splitext(output_file)
+    ppt_output_file = f"{output_base}_PPT{output_ext}"
+    plt.savefig(ppt_output_file, dpi=300)
+    print(f"PPT-friendly plot saved as {ppt_output_file}")
 
 def main():
     args = parse_args()

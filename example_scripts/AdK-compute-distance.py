@@ -3,6 +3,7 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 from Bio.PDB import PDBParser
 
 def parse_args():
@@ -14,8 +15,8 @@ def parse_args():
     parser.add_argument("-c", "--chain", default="A", help="Chain ID (default: A)")
     parser.add_argument("--arg-res", type=int, default=131, help="Residue number for Arg (default: 131)")
     parser.add_argument("--asp-res", type=int, default=146, help="Residue number for Asp (default: 146)")
-    parser.add_argument("--arg-atom", default="CZ", help="Atom name in Arg residue (default: CZ)")
-    parser.add_argument("--asp-atom", default="CG", help="Atom name in Asp residue (default: CG)")
+    parser.add_argument("--arg-atom", default="CZ", help="Atom name in Arg residue")
+    parser.add_argument("--asp-atom", default="CG", help="Atom name in Asp residue")
     parser.add_argument("-o", "--output", default="distance_plot.png", help="Output image file (png or svg)")
     return parser.parse_args()
 
@@ -58,13 +59,34 @@ def plot_distances(model_ids, distances, output_file, arg_atom_name, asp_atom_na
     """
     plt.figure(figsize=(8, 5))
     plt.plot(model_ids, distances, marker='o', linestyle='-', color='blue')
-    plt.xlabel("Model Frame Number")
-    plt.ylabel("Distance (Å)")
-    plt.title(f"Distance between Arg131 ({arg_atom_name}) and Asp146 ({asp_atom_name}) vs. Model Frame")
+    plt.xlabel("Model Frame Number", fontsize=12)
+    plt.ylabel("Distance (Å)", fontsize=12)
+    plt.title(f"Distance between Arg131 ({arg_atom_name}) and Asp146 ({asp_atom_name}) vs. Model Frame", fontsize=14)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(output_file)
+    plt.savefig(output_file, dpi=300)
     print(f"Plot saved as {output_file}")
+
+    # PPT-friendly version
+    plt.figure(figsize=(8, 5))
+    plt.plot(model_ids, distances, marker='o', linestyle='-', color='blue',
+             linewidth=2.5, markersize=8)
+    plt.xlabel("Model Frame Number", fontsize=16)
+    plt.ylabel("Distance (Å)", fontsize=16)
+    plt.title(f"Distance between Arg131 ({arg_atom_name}) and Asp146 ({asp_atom_name}) vs. Model Frame", fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.grid(True, linewidth=1.5)
+    ax = plt.gca()
+    for spine in ax.spines.values():
+        spine.set_linewidth(2.0)
+    plt.tight_layout()
+    output_base, output_ext = os.path.splitext(output_file)
+    ppt_output_file = f"{output_base}_PPT{output_ext}"
+    plt.savefig(ppt_output_file, dpi=300)
+    print(f"PPT-friendly plot saved as {ppt_output_file}")
 
 def main():
     args = parse_args()

@@ -37,7 +37,7 @@ def main():
         default=50.0,
         help="Multiplier for smoothness threshold calculation: x * RMSD(Start,End) / numFrames"
     )
-    parser.add_argument("--output_prefix", default="path_geom_eval", help="Prefix for output plot files and data.")
+    parser.add_argument("--output_prefix", default="geom_eval", help="Prefix for output plot files and data.")
     parser.add_argument("--skip_plots", action="store_true", help="Skip generating plots.")
 
     args = parser.parse_args()
@@ -204,19 +204,21 @@ def main():
         # Color points by frame index
         scatter_colors = frames
         sc = ax_scatter.scatter(results_np['rmsd_to_start'], results_np['rmsd_to_end'],
-                                c=scatter_colors, cmap='viridis', s=10, alpha=0.7,
+                                c=scatter_colors, cmap='viridis', s=40, alpha=0.7,
                                 label='Frames (color=Frame Index)')
-        ax_scatter.set_xlabel(f"RMSD to Start (Å)")
-        ax_scatter.set_ylabel(f"RMSD to End (Å)")
-        ax_scatter.set_title('Path Deviation Analysis')
+        ax_scatter.set_xlabel(f"RMSD to Start (Å)", fontsize=16) # Increased label font size
+        ax_scatter.set_ylabel(f"RMSD to End (Å)", fontsize=16) # Increased label font size
+        ax_scatter.set_title('Path Deviation Analysis', fontsize=18) # Increased title font size
         # Keep threshold lines as reference, update label conditionally
         threshold_label = f'RMSD(Start,End) ({deviation_rmsd_threshold_value:.2f} Å)' if args.deviation_threshold_multiplier == 1.0 else f'RMSD(Start,End) * {args.deviation_threshold_multiplier:.1f} ({deviation_rmsd_threshold_value:.2f} Å)'
-        ax_scatter.axhline(deviation_rmsd_threshold_value, color='grey', linestyle=':', alpha=0.7)
-        ax_scatter.axvline(deviation_rmsd_threshold_value, color='grey', linestyle=':', alpha=0.7, label=threshold_label) # Use conditional label
+        ax_scatter.axhline(deviation_rmsd_threshold_value, color='grey', linestyle='--', alpha=0.9, linewidth=2) # Made line more prominent
+        ax_scatter.axvline(deviation_rmsd_threshold_value, color='grey', linestyle='--', alpha=0.9, linewidth=2, label=threshold_label) # Use conditional label and made line more prominent
         ax_scatter.grid(True, alpha=0.3)
-        ax_scatter.legend(fontsize='small')
+        ax_scatter.legend(fontsize='large')
+        ax_scatter.tick_params(axis='both', which='major', labelsize=14) # Increase tick label size
         cbar = fig_scatter.colorbar(sc)
-        cbar.set_label('Frame Index')
+        cbar.set_label('Frame Index', fontsize=16) # Increased colorbar label font size
+        cbar.ax.tick_params(labelsize=14)
         fig_scatter.tight_layout()
         scatter_plot_filename = f"{output_prefix}_deviation_scatter.png"
         fig_scatter.savefig(scatter_plot_filename, dpi=150)
