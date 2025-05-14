@@ -75,7 +75,7 @@ def plot_distances(model_ids, distances, output_file, arg_atom_name, asp_atom_na
              linewidth=2.5, markersize=8)
     plt.xlabel("Model Frame Number", fontsize=16)
     plt.ylabel("Distance (Å)", fontsize=16)
-    plt.title(f"Distance between Arg131 ({arg_atom_name}) and Asp146 ({asp_atom_name}) vs. Model Frame", fontsize=18)
+    plt.title(f"Distance between Arg131 ({arg_atom_name}) and Asp146 ({asp_atom_name})", fontsize=18)
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     plt.grid(True, linewidth=1.5)

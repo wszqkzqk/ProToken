@@ -63,8 +63,55 @@ def plot_distance_map(dist_map, title, output_path, verbose=True):
     ax.set_title(title)
     ax.set_xlabel("Residue Index")
     ax.set_ylabel("Residue Index")
-    plt.colorbar(im, label='Cα-Cα Distance (Å)', ax=ax)
+    colorbar = plt.colorbar(im, label='Cα-Cα Distance (Å)', ax=ax)
+
     save_figure(fig, output_path, verbose)
+
+    ppt_path = output_path.replace('.png', '_PPT.png').replace('.jpg', '_PPT.jpg')
+    ax.set_title(title, fontsize=18)
+    ax.set_xlabel("Residue Index", fontsize=16)
+    ax.set_ylabel("Residue Index", fontsize=16)
+    ax.tick_params(axis='both', labelsize=14, width=2)
+    colorbar.ax.tick_params(labelsize=14, width=2)
+    colorbar.set_label('Cα-Cα Distance (Å)', fontsize=16)
+    for spine in ax.spines.values():
+        spine.set_linewidth(2)
+    plt.tight_layout()
+    fig.savefig(ppt_path, bbox_inches='tight', dpi=300)
+    if verbose:
+        print(f"Saved PPT-friendly figure: {ppt_path}")
+    plt.close(fig)
+
+def plot_difference_map(dist_diff, top_pairs_indices, title, output_path, verbose=True):
+    """Plots the distance difference map, highlighting the selected pairs."""
+    fig, ax = plt.subplots(figsize=(7, 6))
+    im = ax.imshow(dist_diff, cmap='Greens', origin='lower')
+    ax.set_title(title)
+    ax.set_xlabel("Residue Index")
+    ax.set_ylabel("Residue Index")
+    colorbar = plt.colorbar(im, label='Absolute Distance Change (Å)', ax=ax)
+    if top_pairs_indices and len(top_pairs_indices) < 500:
+        xs = [p[1] for p in top_pairs_indices]
+        ys = [p[0] for p in top_pairs_indices]
+        ax.scatter(xs, ys, s=5, c='blue', alpha=0.5, label=f'Top {len(top_pairs_indices)} Changing Pairs')
+        ax.scatter(ys, xs, s=5, c='blue', alpha=0.5)
+
+    save_figure(fig, output_path, verbose)
+
+    ppt_path = output_path.replace('.png', '_PPT.png').replace('.jpg', '_PPT.jpg')
+    ax.set_title(title, fontsize=18)
+    ax.set_xlabel("Residue Index", fontsize=16)
+    ax.set_ylabel("Residue Index", fontsize=16)
+    ax.tick_params(axis='both', labelsize=14, width=2)
+    colorbar.ax.set_ylabel('Absolute Distance Change (Å)', fontsize=16)
+    colorbar.ax.tick_params(labelsize=14)
+    for spine in ax.spines.values():
+        spine.set_linewidth(2)
+    plt.tight_layout()
+    fig.savefig(ppt_path, bbox_inches='tight', dpi=300)
+    if verbose:
+        print(f"Saved PPT-friendly figure: {ppt_path}")
+    plt.close(fig)
 # --- End Static Structure Functions ---
 
 
@@ -153,21 +200,6 @@ def find_changing_pairs(
 
     return selected_pairs_indices, dist_diff, selected_pairs_info
 # --- End MODIFIED function ---
-
-def plot_difference_map(dist_diff, top_pairs_indices, title, output_path, verbose=True):
-    """Plots the distance difference map, highlighting the selected pairs."""
-    fig, ax = plt.subplots(figsize=(7, 6))
-    im = ax.imshow(dist_diff, cmap='Greens', origin='lower')
-    ax.set_title(title)
-    ax.set_xlabel("Residue Index")
-    ax.set_ylabel("Residue Index")
-    plt.colorbar(im, label='Absolute Distance Change (Å)', ax=ax)
-    if top_pairs_indices and len(top_pairs_indices) < 500:
-         xs = [p[1] for p in top_pairs_indices]
-         ys = [p[0] for p in top_pairs_indices]
-         ax.scatter(xs, ys, s=5, c='blue', alpha=0.5, label=f'Top {len(top_pairs_indices)} Changing Pairs')
-         ax.scatter(ys, xs, s=5, c='blue', alpha=0.5)
-    save_figure(fig, output_path, verbose)
 
 def save_selected_pairs(pairs_indices, pairs_info, output_dir, verbose=True):
     """Saves selected pairs (indices and readable info)."""

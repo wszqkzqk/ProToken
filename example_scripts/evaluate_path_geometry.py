@@ -196,8 +196,27 @@ def main():
         ax_smooth.grid(True, alpha=0.5)
         fig_smooth.tight_layout()
         smooth_plot_filename = f"{output_prefix}_smoothness_plot.png"
-        fig_smooth.savefig(smooth_plot_filename, dpi=150)
+        fig_smooth.savefig(smooth_plot_filename, dpi=300)
         print(f"Smoothness plot saved to: {smooth_plot_filename}")
+
+        # PPT-friendly smoothness plot
+        fig_smooth_ppt, ax_smooth_ppt = plt.subplots(figsize=(10, 4))
+        ax_smooth_ppt.plot(frames[1:], results_np['rmsd_frame_to_frame'][1:],
+                           label='RMSD (Å)', color='purple', linewidth=2.5)
+        ax_smooth_ppt.axhline(smoothness_threshold, color='r', linestyle='--',
+                              label=f'Threshold ({smoothness_threshold:.3f} Å)',
+                              linewidth=2.5)
+        ax_smooth_ppt.set_xlabel('Frame Index', fontsize=20)
+        ax_smooth_ppt.set_ylabel('Frame-to-Frame RMSD (Å)', fontsize=20)
+        ax_smooth_ppt.set_title('Path Smoothness Analysis', fontsize=22)
+        ax_smooth_ppt.legend(fontsize=16)
+        ax_smooth_ppt.grid(True, alpha=0.5)
+        for spine in ax_smooth_ppt.spines.values():
+            spine.set_linewidth(2.0)
+        fig_smooth_ppt.tight_layout()
+        smooth_plot_ppt_filename = f"{output_prefix}_smoothness_plot_PPT.png"
+        fig_smooth_ppt.savefig(smooth_plot_ppt_filename, dpi=300)
+        print(f"PPT-friendly smoothness plot saved to: {smooth_plot_ppt_filename}")
 
         # Plot 2: Deviation RMSD Scatter Plot
         fig_scatter, ax_scatter = plt.subplots(figsize=(8, 7))
@@ -223,6 +242,30 @@ def main():
         scatter_plot_filename = f"{output_prefix}_deviation_scatter.png"
         fig_scatter.savefig(scatter_plot_filename, dpi=150)
         print(f"Deviation scatter plot saved to: {scatter_plot_filename}")
+
+        # PPT-friendly deviation scatter plot
+        fig_scatter_ppt, ax_scatter_ppt = plt.subplots(figsize=(8, 7))
+        sc2 = ax_scatter_ppt.scatter(results_np['rmsd_to_start'], results_np['rmsd_to_end'],
+                                     c=frames, cmap='viridis', s=60, alpha=0.8)
+        ax_scatter_ppt.axhline(deviation_rmsd_threshold_value, color='grey', linestyle='--',
+                               linewidth=2.5)
+        ax_scatter_ppt.axvline(deviation_rmsd_threshold_value, color='grey', linestyle='--',
+                               linewidth=2.5, label=threshold_label)
+        ax_scatter_ppt.set_xlabel("RMSD to Start (Å)", fontsize=16)
+        ax_scatter_ppt.set_ylabel("RMSD to End (Å)", fontsize=16)
+        ax_scatter_ppt.set_title("Path Deviation Analysis", fontsize=18)
+        ax_scatter_ppt.legend(fontsize=14)
+        ax_scatter_ppt.tick_params(axis='both', which='major', labelsize=14)
+        cbar2 = fig_scatter_ppt.colorbar(sc2)
+        cbar2.set_label('Frame Index', fontsize=16)
+        cbar2.ax.tick_params(labelsize=14)
+        ax_scatter_ppt.grid(True, linewidth=1.5)
+        for spine in ax_scatter_ppt.spines.values():
+            spine.set_linewidth(2.0)
+        fig_scatter_ppt.tight_layout()
+        scatter_plot_ppt_filename = f"{output_prefix}_deviation_scatter_PPT.png"
+        fig_scatter_ppt.savefig(scatter_plot_ppt_filename, dpi=150)
+        print(f"PPT-friendly deviation scatter plot saved to: {scatter_plot_ppt_filename}")
 
     print("\nPath geometry evaluation complete.")
 
