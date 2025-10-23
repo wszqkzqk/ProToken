@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+import sys
+import os
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "False"
+sys.path.append('..')
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -14,11 +21,14 @@ from propath.agent import Agent
 # JAX/Flax imports for training
 import optax
 
+import jax.random as random
+
 def train(args):
     """Main training loop."""
 
     # 1. Initialize Environment and Agent
     print("Initializing environment, wrapper, and agent...")
+    # ... (rest of initialization is the same)
     wrapper = ProTokenWrapper(
         ckpt_path=args.ckpt,
         encoder_config_path=args.encoder_config,
@@ -29,34 +39,30 @@ def train(args):
     evaluator = PathEvaluator()
     env = ProteinPathEnv(wrapper, evaluator, args.start_pdb, args.end_pdb, max_steps=args.max_steps)
 
-    # Determine state and action dimensions from the environment embeddings
-    state_dim = env.start_emb.shape[-1] * 2 # Concatenation of current and target embeddings
+    state_dim = env.start_emb.shape[-1] * 2
     action_dim = env.start_emb.shape[-1]
     
     agent = Agent(state_dim=state_dim, action_dim=action_dim, learning_rate=args.learning_rate)
+    main_key = random.PRNGKey(args.seed)
 
-    # 2. Define the training step function (using JAX)
+    # 2. Define the training step function
     @jax.jit
     def train_step(train_state, trajectory):
-        """Performs a single update step of the agent's policy network."""
+        """Performs a single update step using the REINFORCE algorithm."""
         
         def calculate_loss(params):
-            # Unpack trajectory
-            states, actions, rewards = trajectory
+            states, log_probs, rewards = trajectory
             
-            # Calculate discounted returns (Gamma)
+            # Calculate discounted returns
             discounts = jnp.power(args.gamma, jnp.arange(len(rewards)))
             returns = jnp.cumsum(rewards[::-1] * discounts[::-1])[::-1] / discounts
             
-            # Get the actions predicted by the policy for the states in the trajectory
-            predicted_actions = train_state.apply_fn({'params': params}, states)
+            # Normalize returns for stability
+            returns = (returns - jnp.mean(returns)) / (jnp.std(returns) + 1e-8)
             
-            # REINFORCE loss: -log_prob(action) * return
-            # For a deterministic policy with continuous actions, a simple MSE loss
-            # against the action taken, weighted by the return, can be a starting point.
-            # This is a simplification; more advanced algorithms would use log probabilities of a distribution.
-            loss = jnp.mean(((predicted_actions - actions)**2) * returns[:, None])
-            return loss
+            # REINFORCE loss: - (log_prob * discounted_return)
+            policy_loss = -jnp.mean(log_probs * returns)
+            return policy_loss
 
         grad_fn = jax.value_and_grad(calculate_loss)
         loss, grads = grad_fn(train_state.params)
@@ -69,24 +75,28 @@ def train(args):
 
     for episode in tqdm(range(args.num_episodes)):
         # Collect a trajectory
-        states, actions, rewards = [], [], []
+        states, log_probs, rewards = [], [], []
         state = env.reset()
         
+        # Split key for the episode
+        main_key, episode_key = random.split(main_key)
+
         for step in range(env.max_steps):
-            # Prepare state for the agent (concatenate current and target embeddings)
+            # Prepare state for the agent
             agent_state = jnp.concatenate([state[0], state[1]], axis=-1)
             
+            # Split key for action selection
+            episode_key, action_key = random.split(episode_key)
+            
             # Select action
-            action = agent.select_action(agent.train_state.params, agent_state)
-            # In a real scenario, add noise for exploration
-            # action += jax.random.normal(agent.key, shape=action.shape) * args.exploration_noise
+            action, log_prob = agent.select_action(agent.train_state.params, agent_state, action_key)
             
             # Environment step
             next_state, reward, done, _ = env.step(action)
             
             # Store experience
             states.append(agent_state)
-            actions.append(action)
+            log_probs.append(log_prob)
             rewards.append(reward)
             
             state = next_state
@@ -94,7 +104,7 @@ def train(args):
                 break
         
         # Prepare trajectory for training
-        trajectory = (jnp.array(states), jnp.array(actions), jnp.array(rewards))
+        trajectory = (jnp.array(states), jnp.array(log_probs), jnp.array(rewards))
         
         # Update the agent
         agent.train_state, loss = train_step(agent.train_state, trajectory)
@@ -106,7 +116,6 @@ def train(args):
             print(f"Episode {episode}, Total Reward: {total_reward:.4f}, Loss: {loss:.4f}")
 
     print("Training finished.")
-    # Here you would save the trained agent parameters
 
 
 if __name__ == "__main__":
@@ -128,6 +137,7 @@ if __name__ == "__main__":
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='Learning rate for the agent.')
     parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor for rewards.')
     parser.add_argument('--log_interval', type=int, default=10, help='Interval for printing training logs.')
+    parser.add_argument('--seed', type=int, default=0, help='Random seed for reproducibility.')
     parser.add_argument('--padding_len', type=int, default=768, help="Padding length for the model.")
 
     args = parser.parse_args()

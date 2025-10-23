@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 
+import sys
 import os
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "False"
+sys.path.append('..')
+
+import jax
 import sys
 import numpy as np
 import argparse
@@ -19,13 +26,13 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # ProToken specific imports
-from model.encoder import VQ_Encoder
-from model.decoder import VQ_Decoder, Protein_Decoder
-from data.protein_utils import save_pdb_from_aux
-from common.config_load import load_config
-from data.dataset import protoken_basic_generator
-from data.utils import make_2d_features
-from config.global_config import GLOBAL_CONFIG
+from PROTOKEN.model.encoder import VQ_Encoder
+from PROTOKEN.model.decoder import VQ_Decoder, Protein_Decoder
+from PROTOKEN.data.protein_utils import save_pdb_from_aux
+from PROTOKEN.common.config_load import load_config
+from PROTOKEN.data.dataset import protoken_basic_generator
+from PROTOKEN.data.utils import make_2d_features
+from PROTOKEN.config.global_config import GLOBAL_CONFIG
 
 class ProTokenWrapper:
     """
@@ -186,26 +193,26 @@ class PathEvaluator:
 class ProteinPathEnv:
     """
     A reinforcement learning environment for finding protein conformation transition paths.
+    Implements a 'guided exploration' strategy where the agent learns a correction to a linear baseline path.
     """
-    def __init__(self, wrapper: ProTokenWrapper, evaluator: PathEvaluator, start_pdb_path: str, end_pdb_path: str, max_steps=50):
+    def __init__(self, wrapper: ProTokenWrapper, evaluator: PathEvaluator, start_pdb_path: str, end_pdb_path: str, max_steps=30):
         self.wrapper = wrapper
         self.evaluator = evaluator
         self.max_steps = max_steps
+        self.step_size = 1.0 / max_steps # The fraction of the total path to traverse in one linear step
 
-        # Encode start and end structures to get embeddings and coordinates
+        # Encode start and end structures
         print("Initializing RL Environment: Encoding start and end structures...")
         self.start_emb, self.start_mask, self.start_len = self.wrapper.encode(start_pdb_path)
         self.end_emb, self.end_mask, self.end_len = self.wrapper.encode(end_pdb_path)
         
         # Decode them once to get the ground truth coordinates for reward calculation
-        # We need features for decoding
         self.feature, _, _ = protoken_basic_generator(start_pdb_path, NUM_RES=self.wrapper.padding_len, crop_start_idx_preset=0)
-        
         self.start_coords = self.wrapper.decode(self.start_emb, self.feature['seq_mask'], self.feature['residue_index'], self.feature['aatype'], "/dev/null")
         self.end_coords = self.wrapper.decode(self.end_emb, self.feature['seq_mask'], self.feature['residue_index'], self.feature['aatype'], "/dev/null")
 
-        self.action_space = None # Define action space (e.g., continuous vector)
-        self.observation_space = None # Define observation space (current_embedding, target_embedding)
+        self.action_space = None
+        self.observation_space = None
 
     def reset(self):
         """Resets the environment to the starting state."""
@@ -213,38 +220,36 @@ class ProteinPathEnv:
         self.current_emb = self.start_emb
         self.current_coords = self.start_coords
         
-        # State is a tuple of the current embedding and the target embedding
         state = (self.current_emb, self.end_emb)
         return state
 
-    def step(self, action):
+    def step(self, delta_action):
         """
-        Execute one time step within the environment.
-        
-        Action is a delta to be added to the current embedding.
+        Execute one time step using guided exploration.
+        The agent's action is a correction (delta) to the linear interpolation baseline.
         """
         self.current_step += 1
 
-        # 1. Apply action to get the new embedding
-        # The agent's action is a perturbation on the latent vector
-        next_emb = self.current_emb + action
+        # 1. Calculate the baseline linear step
+        linear_step_vector = (self.end_emb - self.current_emb) * self.step_size
 
-        # 2. Decode the new embedding to get 3D structure
+        # 2. Apply the agent's correction (delta_action) to the baseline
+        final_step_vector = linear_step_vector + delta_action
+        next_emb = self.current_emb + final_step_vector
+
+        # 3. Decode the new embedding to get 3D structure
         next_coords = self.wrapper.decode(next_emb, self.feature['seq_mask'], self.feature['residue_index'], self.feature['aatype'], "/dev/null")
 
-        # 3. Calculate reward
+        # 4. Calculate reward
         reward = self._calculate_reward(self.current_coords, next_coords)
 
-        # 4. Update state
+        # 5. Update state
         self.current_emb = next_emb
         self.current_coords = next_coords
         
-        # 5. Check for termination
-        done = False
-        if self.current_step >= self.max_steps:
-            done = True
+        # 6. Check for termination
+        done = self.current_step >= self.max_steps
         
-        # The next state for the agent
         next_state = (self.current_emb, self.end_emb)
         info = {}
 

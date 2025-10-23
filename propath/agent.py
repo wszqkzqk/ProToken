@@ -9,7 +9,7 @@ from typing import Sequence
 
 class PolicyNetwork(nn.Module):
     """
-    A simple MLP policy network.
+    A stochastic policy network that outputs parameters for a Gaussian distribution.
     """
     action_dim: int
     hidden_dims: Sequence[int] = (256, 256)
@@ -21,29 +21,36 @@ class PolicyNetwork(nn.Module):
             state: A JAX array representing the concatenated current and target embeddings.
         
         Returns:
-            An action vector of shape (action_dim,).
+            A tuple containing the mean and log_std of the action distribution.
         """
         x = state
         for dim in self.hidden_dims:
             x = nn.Dense(features=dim)(x)
             x = nn.relu(x)
         
-        # Output layer for the action
-        action = nn.Dense(features=self.action_dim)(x)
-        return action
+        # Output layer for the mean of the action
+        mean = nn.Dense(features=self.action_dim)(x)
+        
+        # Output layer for the log standard deviation of the action
+        log_std = nn.Dense(features=self.action_dim)(x)
+        
+        return mean, log_std
+
+import jax.random as random
+from jax.scipy.stats import norm
 
 class Agent:
     """
     The RL Agent that contains the policy network and handles updates.
     """
-    def __init__(self, state_dim: int, action_dim: int, learning_rate=1e-4):
+    def __init__(self, state_dim: int, action_dim: int, learning_rate=1e-4, seed=0):
         self.state_dim = state_dim
         self.action_dim = action_dim
         
         self.policy = PolicyNetwork(action_dim=action_dim)
         
         # Initialize the training state
-        self.key = jax.random.PRNGKey(0)
+        self.key = random.PRNGKey(seed)
         dummy_state = jnp.zeros((1, self.state_dim))
         params = self.policy.init(self.key, dummy_state)['params']
         
@@ -56,29 +63,25 @@ class Agent:
         )
 
     @jax.jit
-    def select_action(self, params, state):
+    def select_action(self, params, state, key):
         """
-        Selects an action based on the current policy and state.
-        For now, this is deterministic. We can add noise for exploration later.
+        Selects an action by sampling from the policy's output distribution.
+        Returns the action and its log probability.
         """
         # Add batch dimension if missing
         if state.ndim == 1:
             state = state[jnp.newaxis, :]
             
-        action = self.train_state.apply_fn({'params': params}, state)
+        mean, log_std = self.train_state.apply_fn({'params': params}, state)
+        std = jnp.exp(log_std)
+        
+        # Sample action from the Gaussian distribution
+        action = mean + std * random.normal(key, shape=mean.shape)
+        
+        # Calculate the log probability of the action
+        log_prob = jnp.sum(norm.logpdf(action, loc=mean, scale=std), axis=-1)
         
         # Remove batch dimension for single action
-        return action.squeeze(0)
+        return action.squeeze(0), log_prob.squeeze(0)
 
-    @jax.jit
-    def update(self, state, trajectory):
-        """
-        Updates the policy network using a simple policy gradient method (REINFORCE).
-        This is a placeholder for the actual training logic which will be in train.py
-        """
-        # This function will be more complex in the actual training script.
-        # For now, it's a placeholder to show the structure.
-        # The actual implementation will compute gradients and apply them.
-        print("Agent.update() called. Actual update logic will be in train.py")
-        return self.train_state
 
