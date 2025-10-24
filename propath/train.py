@@ -3,9 +3,12 @@
 import sys
 import os
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+TOP_LEVEL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "False"
-sys.path.append('..')
+sys.path.extend([
+    TOP_LEVEL_DIR,
+    os.path.join(TOP_LEVEL_DIR, "PROTOKEN"),
+])
 
 import jax
 import jax.numpy as jnp
@@ -14,21 +17,15 @@ import argparse
 import os
 from tqdm import tqdm
 
-# Import our custom modules
 from propath.rl_path_finder import ProTokenWrapper, PathEvaluator, ProteinPathEnv
 from propath.agent import Agent
-
-# JAX/Flax imports for training
-import optax
 
 import jax.random as random
 
 def train(args):
     """Main training loop."""
 
-    # 1. Initialize Environment and Agent
     print("Initializing environment, wrapper, and agent...")
-    # ... (rest of initialization is the same)
     wrapper = ProTokenWrapper(
         ckpt_path=args.ckpt,
         encoder_config_path=args.encoder_config,
@@ -45,7 +42,6 @@ def train(args):
     agent = Agent(state_dim=state_dim, action_dim=action_dim, learning_rate=args.learning_rate)
     main_key = random.PRNGKey(args.seed)
 
-    # 2. Define the training step function
     @jax.jit
     def train_step(train_state, trajectory):
         """Performs a single update step using the REINFORCE algorithm."""
@@ -69,7 +65,6 @@ def train(args):
         train_state = train_state.apply_gradients(grads=grads)
         return train_state, loss
 
-    # 3. Main Training Loop
     print("Starting training...")
     episode_rewards = []
 
@@ -121,15 +116,18 @@ def train(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training script for RL-based protein path finding.')
     
-    # Structure inputs
-    parser.add_argument('--start_pdb', type=str, required=True, help='Path to the starting PDB file.')
-    parser.add_argument('--end_pdb', type=str, required=True, help='Path to the ending PDB file.')
-
-    # Model inputs
-    parser.add_argument('--ckpt', type=str, required=True, help='Path to the model checkpoint (.pkl file).')
-    parser.add_argument('--encoder_config', type=str, required=True, help='Path to the encoder config yaml.')
-    parser.add_argument('--decoder_config', type=str, required=True, help='Path to the decoder config yaml.')
-    parser.add_argument('--vq_config', type=str, required=True, help='Path to the VQ config yaml.')
+    default_ckpt = os.path.join(TOP_LEVEL_DIR, "ckpts/protoken_params_100000.pkl")
+    default_encoder_config = os.path.join(TOP_LEVEL_DIR, "PROTOKEN/config/encoder.yaml")
+    default_decoder_config = os.path.join(TOP_LEVEL_DIR, "PROTOKEN/config/decoder.yaml")
+    default_vq_config = os.path.join(TOP_LEVEL_DIR, "PROTOKEN/config/vq.yaml")
+    # Inputs
+    parser.add_argument('--start_pdb', type=str, required=True)
+    parser.add_argument('--end_pdb', type=str, required=True)
+    parser.add_argument('--output_dir', type=str, required=True)
+    parser.add_argument('--ckpt', type=str, default=default_ckpt)
+    parser.add_argument('--encoder_config', type=str, default=default_encoder_config)
+    parser.add_argument('--decoder_config', type=str, default=default_decoder_config)
+    parser.add_argument('--vq_config', type=str, default=default_vq_config)
 
     # Training parameters
     parser.add_argument('--num_episodes', type=int, default=1000, help='Number of training episodes.')

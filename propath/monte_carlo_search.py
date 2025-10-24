@@ -6,18 +6,20 @@ import os
 from tqdm import tqdm
 
 import sys
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+TOP_LEVEL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "False"
-sys.path.append('..')
+sys.path.extend([
+    TOP_LEVEL_DIR,
+    os.path.join(TOP_LEVEL_DIR, "PROTOKEN"),
+])
 
 from PROTOKEN.data.dataset import protoken_basic_generator
-# Import our custom modules
 from propath.rl_path_finder import ProTokenWrapper, PathEvaluator
 
 def monte_carlo_search(args):
     """Performs a greedy Monte Carlo search to find a path."""
 
-    # 1. Initialize Environment components
     print("Initializing wrapper and evaluator...")
     wrapper = ProTokenWrapper(
         ckpt_path=args.ckpt,
@@ -37,7 +39,6 @@ def monte_carlo_search(args):
     feature, _, _ = protoken_basic_generator(args.start_pdb, NUM_RES=wrapper.padding_len, crop_start_idx_preset=0)
     end_coords = wrapper.decode(end_emb, feature['seq_mask'], feature['residue_index'], feature['aatype'], "/dev/null")
 
-    # 3. Main Search Loop
     print(f"Starting Monte Carlo search with {args.max_steps} steps and {args.num_samples} samples per step...")
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -86,17 +87,19 @@ def monte_carlo_search(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Monte Carlo search for protein path finding.')
-    
-    # Structure inputs
-    parser.add_argument('--start_pdb', type=str, required=True, help='Path to the starting PDB file.')
-    parser.add_argument('--end_pdb', type=str, required=True, help='Path to the ending PDB file.')
-    parser.add_argument('--output_dir', type=str, required=True, help='Directory to save the generated PDB path.')
 
-    # Model inputs
-    parser.add_argument('--ckpt', type=str, required=True, help='Path to the model checkpoint (.pkl file).')
-    parser.add_argument('--encoder_config', type=str, required=True, help='Path to the encoder config yaml.')
-    parser.add_argument('--decoder_config', type=str, required=True, help='Path to the decoder config yaml.')
-    parser.add_argument('--vq_config', type=str, required=True, help='Path to the VQ config yaml.')
+    default_ckpt = os.path.join(TOP_LEVEL_DIR, "ckpts/protoken_params_100000.pkl")
+    default_encoder_config = os.path.join(TOP_LEVEL_DIR, "PROTOKEN/config/encoder.yaml")
+    default_decoder_config = os.path.join(TOP_LEVEL_DIR, "PROTOKEN/config/decoder.yaml")
+    default_vq_config = os.path.join(TOP_LEVEL_DIR, "PROTOKEN/config/vq.yaml")
+    # Inputs
+    parser.add_argument('--start_pdb', type=str, required=True)
+    parser.add_argument('--end_pdb', type=str, required=True)
+    parser.add_argument('--output_dir', type=str, required=True)
+    parser.add_argument('--ckpt', type=str, default=default_ckpt)
+    parser.add_argument('--encoder_config', type=str, default=default_encoder_config)
+    parser.add_argument('--decoder_config', type=str, default=default_decoder_config)
+    parser.add_argument('--vq_config', type=str, default=default_vq_config)
 
     # Search parameters
     parser.add_argument('--max_steps', type=int, default=30, help='Number of steps in the path.')

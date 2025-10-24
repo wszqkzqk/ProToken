@@ -1,10 +1,14 @@
+#!/usr/bin/env python3
 
 import sys
 import os
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+TOP_LEVEL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "False"
-sys.path.append('..')
+sys.path.extend([
+    TOP_LEVEL_DIR,
+    os.path.join(TOP_LEVEL_DIR, "PROTOKEN"),
+])
 
 import jax.numpy as jnp
 import numpy as np
@@ -12,16 +16,13 @@ import argparse
 import os
 from tqdm import tqdm
 
-# Import our custom modules
 from propath.rl_path_finder import ProTokenWrapper, PathEvaluator
-# This import is needed for the initial path generation
 from PROTOKEN.data.dataset import protoken_basic_generator
 
 def evaluate_path_energy(path, evaluator, end_coords, wrapper, feature):
     """Calculates the total 'energy' of a given path."""
     total_energy = 0.0
     
-    # Decode all intermediate structures once
     decoded_coords = []
     for emb in path:
         coords = wrapper.decode(emb, feature['seq_mask'], feature['residue_index'], feature['aatype'], "/dev/null")
@@ -42,7 +43,6 @@ def evaluate_path_energy(path, evaluator, end_coords, wrapper, feature):
 def metropolis_search(args):
     """Performs a path search using Metropolis Monte Carlo with Simulated Annealing."""
 
-    # 1. Initialization
     print("Initializing ProToken wrapper, evaluator, and initial path...")
     wrapper = ProTokenWrapper(
         ckpt_path=args.ckpt,
@@ -74,7 +74,6 @@ def metropolis_search(args):
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # 2. Main Metropolis Loop with Simulated Annealing
     print(f"Starting Metropolis search with {args.num_iterations} iterations...")
     
     for i in tqdm(range(args.num_iterations)):
@@ -112,18 +111,22 @@ def metropolis_search(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Metropolis path search for protein conformation transitions.')
     
+    default_ckpt = os.path.join(TOP_LEVEL_DIR, "ckpts/protoken_params_100000.pkl")
+    default_encoder_config = os.path.join(TOP_LEVEL_DIR, "PROTOKEN/config/encoder.yaml")
+    default_decoder_config = os.path.join(TOP_LEVEL_DIR, "PROTOKEN/config/decoder.yaml")
+    default_vq_config = os.path.join(TOP_LEVEL_DIR, "PROTOKEN/config/vq.yaml")
     # Inputs
     parser.add_argument('--start_pdb', type=str, required=True)
     parser.add_argument('--end_pdb', type=str, required=True)
     parser.add_argument('--output_dir', type=str, required=True)
-    parser.add_argument('--ckpt', type=str, required=True)
-    parser.add_argument('--encoder_config', type=str, required=True)
-    parser.add_argument('--decoder_config', type=str, required=True)
-    parser.add_argument('--vq_config', type=str, required=True)
+    parser.add_argument('--ckpt', type=str, default=default_ckpt)
+    parser.add_argument('--encoder_config', type=str, default=default_encoder_config)
+    parser.add_argument('--decoder_config', type=str, default=default_decoder_config)
+    parser.add_argument('--vq_config', type=str, default=default_vq_config)
 
     # Search Parameters
     parser.add_argument('--max_steps', type=int, default=30, help='Number of intermediate steps in the path.')
-    parser.add_argument('--num_iterations', type=int, default=10000, help='Total number of Metropolis iterations.')
+    parser.add_argument('--num_iterations', type=int, default=1000, help='Total number of Metropolis iterations.')
     parser.add_argument('--noise_scale', type=float, default=0.05, help='Scale of the random noise for perturbations.')
     parser.add_argument('--temp_initial', type=float, default=1.0, help='Initial temperature for simulated annealing.')
     parser.add_argument('--padding_len', type=int, default=768)
